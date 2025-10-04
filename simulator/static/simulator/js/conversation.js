@@ -4,11 +4,33 @@
   const steps = Array.from(form.querySelectorAll('.step'));
   const progressBar = document.getElementById('progressBar');
   let current = 0;
+
+  // === NOWE: konfiguracja pola roku ===
+  const yearInput = form.dob_year;
+  if (yearInput) {
+    // podpowiedzi i ograniczenia w HTML
+    yearInput.setAttribute('inputmode', 'numeric'); // klawiatura numeryczna na mobile
+    yearInput.setAttribute('pattern', '\\d{4}');    // 4 cyfry
+    yearInput.setAttribute('maxlength', '4');
+
+    // blokuj niedozwolone znaki już na wprowadzaniu
+    yearInput.addEventListener('beforeinput', (e) => {
+      // jeśli użytkownik wpisuje/wnieca coś, co zawiera nie-cyfry → blokuj
+      if (e.data && /\D/.test(e.data)) e.preventDefault();
+    });
+
+    // ostateczne czyszczenie (działa też na wklejanie, drag&drop itd.)
+    yearInput.addEventListener('input', () => {
+      const digits = yearInput.value.replace(/\D/g, '').slice(0, 4);
+      if (yearInput.value !== digits) yearInput.value = digits;
+    });
+  }
+  // === KONIEC NOWEGO ===
+
   const showStep = (idx, direction = 1) => {
     if (idx < 0 || idx >= steps.length || idx === current) return;
     const out = steps[current];
     const inside = steps[idx];
-    // animacja wygaszania
     out.classList.remove('fade-in');
     out.classList.add('fade-out');
     out.addEventListener('animationend', function handler() {
@@ -19,11 +41,12 @@
     current = idx;
     updateProgress();
   };
+
   const updateProgress = () => {
-    const pct = Math.round(((current) / (steps.length - 1)) * 100);
-    progressBar.style.width = pct + '%';
+    const pct = Math.round((current / (steps.length - 1)) * 100);
+    if (progressBar) progressBar.style.width = pct + '%';
   };
-  // obsługa przycisków
+
   form.addEventListener('click', (e) => {
     if (e.target.closest('.next-btn')) {
       if (validateStep(current)) showStep(current + 1, +1);
@@ -32,7 +55,7 @@
       showStep(current - 1, -1);
     }
   });
-  // walidacje per krok
+
   function validateStep(i) {
     hideErrors();
     switch (i) {
@@ -42,8 +65,11 @@
         return true;
       }
       case 1: {
-        const y = form.dob_year.value;
-        const valid = /^\d{4}$/.test(y) && Number(y) >= 1900 && Number(y) <= new Date().getFullYear();
+        const y = (form.dob_year?.value || '').trim();
+        const isFourDigits = /^\d{4}$/.test(y);
+        const num = Number(y);
+        const thisYear = new Date().getFullYear();
+        const valid = isFourDigits && num >= 1900 && num <= thisYear;
         if (!valid) return showErr('dob');
         return true;
       }
@@ -56,6 +82,7 @@
         return true;
     }
   }
+
   function hideErrors() {
     form.querySelectorAll('.invalid-feedback').forEach(el => el.classList.add('d-none'));
   }
@@ -64,37 +91,37 @@
     if (el) el.classList.remove('d-none');
     return false;
   }
-  // finalna walidacja przy submit
+
   form.addEventListener('submit', (e) => {
     hideErrors();
     let ok = true;
-    [0,1,2].forEach(i => { if (ok) ok = validateStep(i); });
+    [0, 1, 2].forEach(i => { if (ok) ok = validateStep(i); });
     const val = Number(form.target_pension.value);
     if (!(val > 0)) { showErr('target_pension'); ok = false; }
     if (!ok) {
       e.preventDefault();
-      // skocz do pierwszego błędnego kroku
-      const firstErrStep = [0,1,2,3].find(i => {
+      const firstErrStep = [0, 1, 2, 3].find(i => {
         if (i === 3) return !(val > 0);
         return !validateStep(i);
       });
       if (firstErrStep !== undefined) showStep(firstErrStep);
     }
   });
+
+  // === PRZENIESIONE DO ŚRODKA: dynamiczne pytanie emerytalne wg płci ===
+  const genderInputs = form.querySelectorAll('input[name="gender"]');
+  const pensionQuestion = document.getElementById('pensionQuestion');
+  genderInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      if (pensionQuestion) {
+        pensionQuestion.textContent =
+          input.value === 'Kobieta'
+            ? 'A teraz przejdźmy do konkretów. Jaką chciałabyś mieć emeryturę?'
+            : 'A teraz przejdźmy do konkretów. Jaką chciałbyś mieć emeryturę?';
+      }
+    });
+  });
+  // === KONIEC PRZENIESIONYCH ===
+
   updateProgress();
 })();
-
-// Dynamiczne dopasowanie pytania emerytalnego do płci
-const genderInputs = form.querySelectorAll('input[name="gender"]');
-const pensionQuestion = document.getElementById('pensionQuestion');
-
-genderInputs.forEach(input => {
-  input.addEventListener('change', () => {
-    if (pensionQuestion) {
-      pensionQuestion.textContent =
-        input.value === 'Kobieta'
-          ? 'A teraz przejdźmy do konkretów. Jaką chciałabyś mieć emeryturę?'
-          : 'A teraz przejdźmy do konkretów. Jaką chciałbyś mieć emeryturę?';
-    }
-  });
-});
