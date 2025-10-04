@@ -1,391 +1,364 @@
 /**
- * Timeline interaktywny dla Symulatora Emerytalnego ZUS
- * Wersja demo bez backendu - wszystko w pamięci lokalnej
+ * Timeline z prostokątami - każdy rok to osobny blok
+ * Implementuje dwustopniowy proces wyboru aktywności
  */
 
-class RetirementTimeline {
+class RectangleTimeline {
     constructor() {
         this.isSelecting = false;
         this.selectionStart = null;
         this.selectionEnd = null;
-        this.isDraggingPlannedRetirement = false;
-        this.currentWorkPeriodId = null;
-        this.minAge = 10;
-        this.maxAge = 100;
+        this.selectedBlocks = [];
+        this.isAgeMode = true; // true = wiek życia, false = lata kalendarzowe
 
-        // Domyślne dane aplikacji
+        // Dane aplikacji
         this.appData = {
             currentAge: 30,
             gender: 'M',
+            birthYear: 1995,
             legalRetirementAge: 65,
             plannedRetirementAge: 65,
-            workPeriods: []
+            activities: [] // Tablica aktywności: {startAge, endAge, type, contractType?, salary?}
         };
 
         this.init();
     }
 
     init() {
-        this.setupTimeline();
+        this.setupAppData();
+        this.renderTimeline();
         this.bindEvents();
         this.updatePensionDisplay();
     }
 
-    setupTimeline() {
-        this.renderAgeLabels();
-        this.renderTimelineLines();
-        this.renderWorkPeriods();
+    setupAppData() {
+        const currentYear = new Date().getFullYear();
+        this.appData.birthYear = currentYear - this.appData.currentAge;
+        this.appData.legalRetirementAge = this.appData.gender === 'K' ? 60 : 65;
+        this.appData.plannedRetirementAge = this.appData.legalRetirementAge;
     }
 
-    renderAgeLabels() {
-        const labelsContainer = document.getElementById('age-labels');
+    renderTimeline() {
+        this.renderGrid();
+        this.renderLabels();
+        this.updateTimelineMode();
+    }
+
+    renderGrid() {
+        const grid = document.getElementById('timeline-grid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+
+        // Tworzymy 90 prostokątów (lata 10-100)
+        for (let age = 10; age <= 99; age++) {
+            const block = document.createElement('div');
+            block.className = 'year-block';
+            block.dataset.age = age;
+
+            // Oznacz specjalne wieki
+            if (age === this.appData.currentAge) {
+                block.classList.add('current-age');
+            }
+            if (age === this.appData.legalRetirementAge) {
+                block.classList.add('legal-retirement');
+            }
+            if (age === this.appData.plannedRetirementAge) {
+                block.classList.add('planned-retirement');
+            }
+
+            // Sprawdź czy ten wiek ma przypisaną aktywność
+            const activity = this.findActivityForAge(age);
+            if (activity) {
+                block.classList.add(activity.type);
+                if (activity.type === 'work') {
+                    block.textContent = activity.contractType ? activity.contractType.substring(0, 3) : 'PR';
+                } else if (activity.type === 'sick-leave') {
+                    block.textContent = 'UZ';
+                } else if (activity.type === 'break') {
+                    block.textContent = 'PR';
+                }
+            }
+
+            grid.appendChild(block);
+        }
+    }
+
+    renderLabels() {
+        const labelsContainer = document.getElementById('year-labels');
         if (!labelsContainer) return;
 
         labelsContainer.innerHTML = '';
 
-        // Etykiety co 10 lat
-        for (let age = 10; age <= 100; age += 10) {
+        // Etykiety co 10 lat lub co 10 lat kalendarzowych
+        for (let i = 0; i < 90; i += 10) {
             const label = document.createElement('div');
-            label.className = 'age-label';
-            label.textContent = age + ' lat';
-            label.style.left = this.ageToPixel(age) + '%';
+            label.className = 'year-label';
+
+            if (this.isAgeMode) {
+                label.textContent = (10 + i).toString();
+            } else {
+                const year = this.appData.birthYear + 10 + i;
+                label.textContent = year.toString();
+            }
+
             labelsContainer.appendChild(label);
         }
     }
 
-    renderTimelineLines() {
-        const currentLine = document.getElementById('current-age-line');
-        const legalLine = document.getElementById('legal-retirement-line');
-        const plannedLine = document.getElementById('planned-retirement-line');
-
-        if (currentLine) {
-            currentLine.style.left = this.ageToPixel(this.appData.currentAge) + '%';
-        }
-
-        if (legalLine) {
-            legalLine.style.left = this.ageToPixel(this.appData.legalRetirementAge) + '%';
-        }
-
-        if (plannedLine) {
-            plannedLine.style.left = this.ageToPixel(this.appData.plannedRetirementAge) + '%';
-        }
-    }
-
-    renderWorkPeriods() {
-        const timeline = document.getElementById('timeline');
-        if (!timeline) return;
-
-        // Remove existing work periods
-        const existingPeriods = timeline.querySelectorAll('.work-period');
-        existingPeriods.forEach(period => period.remove());
-
-        // Add work periods
-        this.appData.workPeriods.forEach(period => {
-            this.createWorkPeriodElement(period);
-        });
-    }
-
-    createWorkPeriodElement(period) {
-        const timeline = document.getElementById('timeline');
-        if (!timeline) return;
-
-        const element = document.createElement('div');
-
-        element.className = `work-period ${this.getContractTypeClass(period.contractType)}`;
-        element.style.left = this.ageToPixel(period.startAge) + '%';
-        element.style.width = this.ageToPixel(period.endAge - period.startAge) + '%';
-        element.textContent = period.contractType;
-        element.dataset.periodId = period.id;
-
-        // Add accessibility attributes
-        element.setAttribute('role', 'button');
-        element.setAttribute('tabindex', '0');
-        element.setAttribute('aria-label',
-            `Okres pracy: ${period.contractType}, wiek ${period.startAge}-${period.endAge}, ${period.salary} zł`);
-
-        timeline.appendChild(element);
-    }
-
-    getContractTypeClass(contractType) {
-        const typeMap = {
-            'Umowa o pracę': 'employment',
-            'Umowa zlecenie': 'mandate',
-            'Umowa o dzieło': 'task',
-            'Własna działalność gospodarcza': 'business',
-            'Umowa B2B': 'b2b'
-        };
-        return typeMap[contractType] || 'employment';
+    findActivityForAge(age) {
+        return this.appData.activities.find(activity =>
+            age >= activity.startAge && age <= activity.endAge
+        );
     }
 
     bindEvents() {
-        const timeline = document.getElementById('timeline');
-        const plannedLine = document.getElementById('planned-retirement-line');
+        const grid = document.getElementById('timeline-grid');
+        const modeSwitch = document.getElementById('timelineMode');
+        const salarySlider = document.getElementById('salarySlider');
 
-        if (timeline) {
-            timeline.addEventListener('mousedown', this.onTimelineMouseDown.bind(this));
-            timeline.addEventListener('click', this.onWorkPeriodClick.bind(this));
-            timeline.addEventListener('keydown', this.onKeyDown.bind(this));
+        // Timeline events
+        if (grid) {
+            grid.addEventListener('mousedown', this.onMouseDown.bind(this));
+            grid.addEventListener('mousemove', this.onMouseMove.bind(this));
+            grid.addEventListener('mouseup', this.onMouseUp.bind(this));
+            grid.addEventListener('mouseleave', this.onMouseUp.bind(this));
         }
 
-        document.addEventListener('mousemove', this.onMouseMove.bind(this));
-        document.addEventListener('mouseup', this.onMouseUp.bind(this));
+        // Mode switch
+        if (modeSwitch) {
+            modeSwitch.addEventListener('change', this.toggleTimelineMode.bind(this));
+        }
 
-        // Planned retirement line dragging
-        if (plannedLine) {
-            plannedLine.addEventListener('mousedown', this.onPlannedRetirementMouseDown.bind(this));
+        // Activity selection
+        document.querySelectorAll('.activity-btn').forEach(btn => {
+            btn.addEventListener('click', this.selectActivity.bind(this));
+        });
+
+        // Salary slider
+        if (salarySlider) {
+            salarySlider.addEventListener('input', this.updateSalaryDisplay.bind(this));
         }
 
         // Modal events
-        const saveBtn = document.getElementById('saveWorkPeriod');
-        const deleteBtn = document.getElementById('deleteWorkPeriod');
-        const saveProfileBtn = document.getElementById('saveProfile');
+        const saveWorkDetails = document.getElementById('saveWorkDetails');
+        const saveProfile = document.getElementById('saveProfile');
 
-        if (saveBtn) {
-            saveBtn.addEventListener('click', this.saveWorkPeriod.bind(this));
-        }
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', this.deleteWorkPeriod.bind(this));
-        }
-        if (saveProfileBtn) {
-            saveProfileBtn.addEventListener('click', this.saveProfile.bind(this));
+        if (saveWorkDetails) {
+            saveWorkDetails.addEventListener('click', this.saveWorkDetails.bind(this));
         }
 
-        // Prevent context menu on timeline
-        if (timeline) {
-            timeline.addEventListener('contextmenu', e => e.preventDefault());
+        if (saveProfile) {
+            saveProfile.addEventListener('click', this.saveProfile.bind(this));
         }
+
+        // Prevent text selection during drag
+        document.addEventListener('selectstart', e => {
+            if (this.isSelecting) e.preventDefault();
+        });
     }
 
-    onTimelineMouseDown(e) {
-        // Don't start selection if clicking on work period or planned retirement line
-        if (e.target.classList.contains('work-period') ||
-            e.target.classList.contains('planned-retirement-line')) {
-            return;
-        }
+    onMouseDown(e) {
+        if (!e.target.classList.contains('year-block')) return;
 
         e.preventDefault();
         this.isSelecting = true;
-
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const percentage = (x / rect.width) * 100;
-
-        this.selectionStart = this.pixelToAge(percentage);
+        this.selectionStart = parseInt(e.target.dataset.age);
         this.selectionEnd = this.selectionStart;
+        this.selectedBlocks = [e.target];
 
-        const selection = document.getElementById('timeline-selection');
-        if (selection) {
-            selection.style.display = 'block';
-            this.updateSelection();
-        }
+        e.target.classList.add('selecting');
     }
 
     onMouseMove(e) {
-        if (this.isSelecting) {
-            const timeline = document.getElementById('timeline');
-            if (!timeline) return;
+        if (!this.isSelecting) return;
 
-            const rect = timeline.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+        const target = e.target;
+        if (!target.classList.contains('year-block')) return;
 
-            this.selectionEnd = this.pixelToAge(percentage);
+        const currentAge = parseInt(target.dataset.age);
+
+        // Sprawdź czy przeciągamy w prawo (tylko w prawo dozwolone)
+        if (currentAge >= this.selectionStart) {
+            this.selectionEnd = currentAge;
             this.updateSelection();
-        } else if (this.isDraggingPlannedRetirement) {
-            const timeline = document.getElementById('timeline');
-            if (!timeline) return;
-
-            const rect = timeline.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-            const age = Math.round(this.pixelToAge(percentage));
-
-            this.updatePlannedRetirement(age);
         }
     }
 
     onMouseUp(e) {
-        if (this.isSelecting) {
-            this.isSelecting = false;
-            const selection = document.getElementById('timeline-selection');
-            if (selection) {
-                selection.style.display = 'none';
-            }
+        if (!this.isSelecting) return;
 
-            const startAge = Math.min(this.selectionStart, this.selectionEnd);
-            const endAge = Math.max(this.selectionStart, this.selectionEnd);
+        this.isSelecting = false;
 
-            if (endAge - startAge >= 1) {
-                this.showWorkPeriodModal(Math.floor(startAge), Math.floor(endAge));
-            }
-        } else if (this.isDraggingPlannedRetirement) {
-            this.isDraggingPlannedRetirement = false;
-            document.body.style.cursor = '';
-            this.updatePensionDisplay();
+        // Usuń klasę selecting ze wszystkich bloków
+        document.querySelectorAll('.year-block.selecting').forEach(block => {
+            block.classList.remove('selecting');
+        });
+
+        // Jeśli zaznaczono przynajmniej jeden rok, pokaż modal
+        if (this.selectionEnd >= this.selectionStart) {
+            this.showActivityModal();
         }
-    }
 
-    onPlannedRetirementMouseDown(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.isDraggingPlannedRetirement = true;
-        document.body.style.cursor = 'ew-resize';
-    }
-
-    onWorkPeriodClick(e) {
-        if (e.target.classList.contains('work-period')) {
-            e.preventDefault();
-            e.stopPropagation();
-            const periodId = e.target.dataset.periodId;
-            if (periodId) {
-                this.editWorkPeriod(periodId);
-            }
-        }
-    }
-
-    onKeyDown(e) {
-        if (e.target.classList.contains('work-period')) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                const periodId = e.target.dataset.periodId;
-                if (periodId) {
-                    this.editWorkPeriod(periodId);
-                }
-            }
-        }
+        this.selectedBlocks = [];
     }
 
     updateSelection() {
-        const selection = document.getElementById('timeline-selection');
-        if (!selection) return;
+        // Usuń poprzednie zaznaczenie
+        document.querySelectorAll('.year-block.selecting').forEach(block => {
+            block.classList.remove('selecting');
+        });
 
-        const startAge = Math.min(this.selectionStart, this.selectionEnd);
-        const endAge = Math.max(this.selectionStart, this.selectionEnd);
+        // Dodaj zaznaczenie do nowego zakresu
+        const grid = document.getElementById('timeline-grid');
+        const blocks = grid.querySelectorAll('.year-block');
 
-        selection.style.left = this.ageToPixel(startAge) + '%';
-        selection.style.width = this.ageToPixel(endAge - startAge) + '%';
-    }
-
-    updatePlannedRetirement(age) {
-        const plannedLine = document.getElementById('planned-retirement-line');
-        if (plannedLine) {
-            plannedLine.style.left = this.ageToPixel(age) + '%';
-        }
-        this.appData.plannedRetirementAge = age;
-    }
-
-    showWorkPeriodModal(startAge, endAge) {
-        this.currentWorkPeriodId = null;
-
-        const title = document.getElementById('workPeriodModalTitle');
-        const startField = document.getElementById('startAge');
-        const endField = document.getElementById('endAge');
-        const salaryField = document.getElementById('salaryGross');
-        const contractSelect = document.getElementById('contractType');
-        const deleteBtn = document.getElementById('deleteWorkPeriod');
-
-        if (title) title.textContent = 'Dodaj okres pracy';
-        if (startField) startField.value = startAge;
-        if (endField) endField.value = endAge;
-        if (salaryField) salaryField.value = '';
-        if (contractSelect) contractSelect.selectedIndex = 0;
-        if (deleteBtn) deleteBtn.style.display = 'none';
-
-        const modal = new bootstrap.Modal(document.getElementById('workPeriodModal'));
-        modal.show();
-    }
-
-    editWorkPeriod(periodId) {
-        const period = this.appData.workPeriods.find(p => p.id == periodId);
-        if (!period) return;
-
-        this.currentWorkPeriodId = periodId;
-
-        const title = document.getElementById('workPeriodModalTitle');
-        const startField = document.getElementById('startAge');
-        const endField = document.getElementById('endAge');
-        const salaryField = document.getElementById('salaryGross');
-        const contractSelect = document.getElementById('contractType');
-        const deleteBtn = document.getElementById('deleteWorkPeriod');
-
-        if (title) title.textContent = 'Edytuj okres pracy';
-        if (startField) startField.value = period.startAge;
-        if (endField) endField.value = period.endAge;
-        if (salaryField) salaryField.value = period.salary;
-        if (deleteBtn) deleteBtn.style.display = 'block';
-
-        // Set contract type
-        if (contractSelect) {
-            for (let option of contractSelect.options) {
-                if (option.textContent === period.contractType) {
-                    option.selected = true;
-                    break;
-                }
+        blocks.forEach(block => {
+            const age = parseInt(block.dataset.age);
+            if (age >= this.selectionStart && age <= this.selectionEnd) {
+                block.classList.add('selecting');
             }
-        }
-
-        const modal = new bootstrap.Modal(document.getElementById('workPeriodModal'));
-        modal.show();
+        });
     }
 
-    saveWorkPeriod() {
-        const contractSelect = document.getElementById('contractType');
-        const startAge = document.getElementById('startAge');
-        const endAge = document.getElementById('endAge');
-        const salary = document.getElementById('salaryGross');
+    showActivityModal() {
+        const modal = new bootstrap.Modal(document.getElementById('activityModal'));
+        const periodSpan = document.getElementById('activity-period');
 
-        if (!contractSelect || !startAge || !endAge || !salary) return;
-
-        const contractType = contractSelect.options[contractSelect.selectedIndex].text;
-
-        const periodData = {
-            id: this.currentWorkPeriodId || Date.now(),
-            startAge: parseInt(startAge.value),
-            endAge: parseInt(endAge.value),
-            contractType: contractType,
-            salary: parseFloat(salary.value)
-        };
-
-        if (this.currentWorkPeriodId) {
-            // Update existing
-            const index = this.appData.workPeriods.findIndex(p => p.id == this.currentWorkPeriodId);
-            if (index !== -1) {
-                this.appData.workPeriods[index] = periodData;
-            }
+        let periodText;
+        if (this.isAgeMode) {
+            periodText = `${this.selectionStart}-${this.selectionEnd} lat`;
         } else {
-            // Add new
-            this.appData.workPeriods.push(periodData);
+            const startYear = this.appData.birthYear + this.selectionStart;
+            const endYear = this.appData.birthYear + this.selectionEnd;
+            periodText = `${startYear}-${endYear}`;
         }
 
-        this.renderWorkPeriods();
-        this.updatePensionDisplay();
-        bootstrap.Modal.getInstance(document.getElementById('workPeriodModal')).hide();
-        this.showMessage('Okres pracy został zapisany', 'success');
+        periodSpan.textContent = periodText;
+        modal.show();
     }
 
-    deleteWorkPeriod() {
-        if (!this.currentWorkPeriodId) return;
+    selectActivity(e) {
+        const activityType = e.target.dataset.activity;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('activityModal'));
+        modal.hide();
 
-        if (!confirm('Czy na pewno chcesz usunąć ten okres pracy?')) {
-            return;
+        if (activityType === 'work') {
+            this.showWorkDetailsModal();
+        } else {
+            // Dla urlopu zdrowotnego i przerwy w pracy od razu zapisz
+            this.saveActivity(activityType);
+        }
+    }
+
+    showWorkDetailsModal() {
+        const modal = new bootstrap.Modal(document.getElementById('workDetailsModal'));
+        const periodDisplay = document.getElementById('work-period-display');
+
+        let periodText;
+        if (this.isAgeMode) {
+            periodText = `${this.selectionStart}-${this.selectionEnd} lat`;
+        } else {
+            const startYear = this.appData.birthYear + this.selectionStart;
+            const endYear = this.appData.birthYear + this.selectionEnd;
+            periodText = `${startYear}-${endYear}`;
         }
 
-        this.appData.workPeriods = this.appData.workPeriods.filter(
-            p => p.id != this.currentWorkPeriodId
+        periodDisplay.value = periodText;
+
+        // Reset form
+        document.getElementById('salarySlider').value = 5000;
+        this.updateSalaryDisplay();
+
+        modal.show();
+    }
+
+    updateSalaryDisplay() {
+        const slider = document.getElementById('salarySlider');
+        const display = document.getElementById('salary-display');
+
+        if (slider && display) {
+            const value = parseInt(slider.value);
+            display.textContent = value.toLocaleString('pl-PL') + ' zł';
+        }
+    }
+
+    saveWorkDetails() {
+        const contractSelect = document.getElementById('contractType');
+        const salarySlider = document.getElementById('salarySlider');
+
+        const contractText = contractSelect.options[contractSelect.selectedIndex].text;
+        const salary = parseInt(salarySlider.value);
+
+        this.saveActivity('work', contractText, salary);
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('workDetailsModal'));
+        modal.hide();
+    }
+
+    saveActivity(type, contractType = null, salary = null) {
+        // Usuń istniejące aktywności w tym zakresie
+        this.appData.activities = this.appData.activities.filter(activity =>
+            !(activity.startAge <= this.selectionEnd && activity.endAge >= this.selectionStart)
         );
 
-        this.renderWorkPeriods();
+        // Dodaj nową aktywność
+        const newActivity = {
+            startAge: this.selectionStart,
+            endAge: this.selectionEnd,
+            type: type,
+            contractType: contractType,
+            salary: salary
+        };
+
+        this.appData.activities.push(newActivity);
+
+        // Przebuduj timeline
+        this.renderGrid();
         this.updatePensionDisplay();
-        bootstrap.Modal.getInstance(document.getElementById('workPeriodModal')).hide();
-        this.showMessage('Okres pracy został usunięty', 'success');
+
+        this.showMessage(`Dodano aktywność: ${this.getActivityDisplayName(type)} 
+                         (${this.selectionStart}-${this.selectionEnd} lat)`, 'success');
+    }
+
+    getActivityDisplayName(type) {
+        const names = {
+            'work': 'Praca',
+            'sick-leave': 'Urlop zdrowotny',
+            'break': 'Przerwa w pracy'
+        };
+        return names[type] || type;
+    }
+
+    toggleTimelineMode() {
+        this.isAgeMode = !this.isAgeMode;
+        this.updateTimelineMode();
+        this.renderLabels();
+    }
+
+    updateTimelineMode() {
+        const label = document.getElementById('timelineModeLabel');
+        const range = document.getElementById('timeline-range');
+
+        if (this.isAgeMode) {
+            label.textContent = 'Wiek życia';
+            range.textContent = '10 - 100 lat';
+        } else {
+            label.textContent = 'Lata kalendarzowe';
+            const startYear = this.appData.birthYear + 10;
+            const endYear = this.appData.birthYear + 99;
+            range.textContent = `${startYear} - ${endYear}`;
+        }
     }
 
     saveProfile() {
         const ageInput = document.getElementById('profileAge');
         const genderInput = document.getElementById('profileGender');
+        const retirementInput = document.getElementById('profileRetirementYear');
 
         if (ageInput) {
             this.appData.currentAge = parseInt(ageInput.value) || 30;
+            this.appData.birthYear = new Date().getFullYear() - this.appData.currentAge;
         }
 
         if (genderInput) {
@@ -393,8 +366,13 @@ class RetirementTimeline {
             this.appData.legalRetirementAge = genderInput.value === 'K' ? 60 : 65;
         }
 
-        // Aktualizuj timeline
-        this.renderTimelineLines();
+        if (retirementInput) {
+            const retirementYear = parseInt(retirementInput.value);
+            this.appData.plannedRetirementAge = retirementYear - this.appData.birthYear;
+        }
+
+        // Przebuduj timeline
+        this.renderTimeline();
         this.updatePensionDisplay();
 
         // Aktualizuj wyświetlane dane
@@ -408,51 +386,59 @@ class RetirementTimeline {
     }
 
     updatePensionDisplay() {
-        // Prosta kalkulacja demonstracyjna
-        let totalYears = 0;
+        // Oblicz statystyki z aktywności
+        let totalWorkYears = 0;
         let totalContributions = 0;
 
-        this.appData.workPeriods.forEach(period => {
-            const years = period.endAge - period.startAge;
-            totalYears += years;
+        this.appData.activities.forEach(activity => {
+            if (activity.type === 'work') {
+                const years = activity.endAge - activity.startAge + 1;
+                totalWorkYears += years;
 
-            // Różne stawki składek w zależności od typu umowy
-            let contributionRate = 0.1952; // 19.52% dla większości umów
-            if (period.contractType === 'Umowa o dzieło' || period.contractType === 'Umowa B2B') {
-                contributionRate = 0; // 0% dla tych umów
+                if (activity.salary) {
+                    // Różne stawki składek w zależności od typu umowy
+                    let contributionRate = 0.1952; // 19.52% domyślnie
+
+                    if (activity.contractType &&
+                        (activity.contractType.includes('dzieło') || activity.contractType.includes('B2B'))) {
+                        contributionRate = 0; // 0% dla dzieła i B2B
+                    }
+
+                    totalContributions += activity.salary * 12 * years * contributionRate;
+                }
             }
-
-            totalContributions += (period.salary || 0) * 12 * years * contributionRate;
         });
 
-        // Uproszczone wyliczenie emerytury (kapitał / oczekiwana długość życia)
-        const lifeExpectancyMonths = this.appData.gender === 'K' ? 260 : 220; // miesiące
+        // Oblicz emeryturę
+        const lifeExpectancyMonths = this.appData.gender === 'K' ? 260 : 220;
         const estimatedPension = totalContributions / lifeExpectancyMonths;
 
         // Aktualizuj UI
-        const pensionAmount = document.getElementById('pension-amount');
-        const workYears = document.getElementById('work-years');
-        const totalContrib = document.getElementById('total-contributions');
-        const retirementAge = document.getElementById('retirement-age');
+        this.updateUI({
+            pension: estimatedPension,
+            workYears: totalWorkYears,
+            contributions: totalContributions,
+            retirementAge: this.appData.plannedRetirementAge
+        });
+    }
 
-        if (pensionAmount) {
-            pensionAmount.textContent = estimatedPension.toLocaleString('pl-PL', {
+    updateUI(data) {
+        const elements = {
+            'pension-amount': data.pension.toLocaleString('pl-PL', {
                 style: 'currency',
                 currency: 'PLN'
-            });
-        }
+            }),
+            'work-years': data.workYears,
+            'total-contributions': Math.round(data.contributions),
+            'retirement-age': data.retirementAge
+        };
 
-        if (workYears) {
-            workYears.textContent = totalYears;
-        }
-
-        if (totalContrib) {
-            totalContrib.textContent = Math.round(totalContributions);
-        }
-
-        if (retirementAge) {
-            retirementAge.textContent = this.appData.plannedRetirementAge;
-        }
+        Object.entries(elements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        });
     }
 
     showMessage(message, type) {
@@ -472,18 +458,9 @@ class RetirementTimeline {
             }
         }, 5000);
     }
-
-    // Konwersje wiek <-> piksele (procenty)
-    ageToPixel(age) {
-        return ((age - this.minAge) / (this.maxAge - this.minAge)) * 100;
-    }
-
-    pixelToAge(percentage) {
-        return this.minAge + (percentage / 100) * (this.maxAge - this.minAge);
-    }
 }
 
-// Initialize timeline when DOM is loaded
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new RetirementTimeline();
+    new RectangleTimeline();
 });
