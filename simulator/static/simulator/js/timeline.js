@@ -1,14 +1,13 @@
 /**
- * Timeline z prostokątami - każdy rok to osobny blok
- * Implementuje dwustopniowy proces wyboru aktywności
+ * Timeline z dynamiczną tabelą - wiersz nagłówka + wiersze aktywności
+ * Implementuje dwustopniowy proces wyboru aktywności z obsługą nakładających się aktywności
  */
 
-class RectangleTimeline {
+class DynamicTimeline {
     constructor() {
         this.isSelecting = false;
         this.selectionStart = null;
         this.selectionEnd = null;
-        this.selectedBlocks = [];
         this.isAgeMode = true; // true = wiek życia, false = lata kalendarzowe
 
         // Dane aplikacji
@@ -18,7 +17,7 @@ class RectangleTimeline {
             birthYear: 1995,
             legalRetirementAge: 65,
             plannedRetirementAge: 65,
-            activities: [] // Tablica aktywności: {startAge, endAge, type, contractType?, salary?}
+            activities: [] // {startAge, endAge, type, contractType?, salary?, row}
         };
 
         this.init();
@@ -39,40 +38,125 @@ class RectangleTimeline {
     }
 
     renderTimeline() {
-        this.renderGrid();
-        this.renderLabels();
+        this.renderTable();
+        this.renderVerticalLines(); // nowa metoda
         this.updateTimelineMode();
     }
 
-    renderGrid() {
-        const grid = document.getElementById('timeline-grid');
-        if (!grid) return;
+    renderVerticalLines() {
+        const overlay = document.getElementById('timeline-overlay');
+        const labels = document.getElementById('timeline-line-labels');
 
-        grid.innerHTML = '';
+        if (!overlay || !labels) return;
 
-        // Tworzymy 90 prostokątów (lata 10-100)
-        for (let age = 10; age <= 99; age++) {
+        // Wyczyść poprzednie linie
+        overlay.innerHTML = '';
+        labels.innerHTML = '';
+
+        // Dane o liniach
+        const lines = [
+            {
+                age: this.appData.currentAge,
+                className: 'current-age-line',
+                labelClassName: 'current-age-label',
+                text: `Obecny wiek (${this.appData.currentAge})`
+            },
+            {
+                age: this.appData.legalRetirementAge,
+                className: 'legal-retirement-line',
+                labelClassName: 'legal-retirement-label',
+                text: `Ustawowy wiek emerytury (${this.appData.legalRetirementAge})`
+            },
+            {
+                age: this.appData.plannedRetirementAge,
+                className: 'planned-retirement-line',
+                labelClassName: 'planned-retirement-label',
+                text: `Planowany wiek emerytury (${this.appData.plannedRetirementAge})`
+            }
+        ];
+
+        lines.forEach(lineData => {
+            // Sprawdź czy wiek jest w zakresie 10-80
+            if (lineData.age >= 10 && lineData.age <= 80) {
+                // Oblicz pozycję (kolumna wieku - 9 = pozycja w siatce)
+                const position = ((lineData.age - 10) / 70) * 100; // procent szerokości
+
+                // Utwórz linię
+                const line = document.createElement('div');
+                line.className = `timeline-vertical-line ${lineData.className}`;
+                line.style.left = `${position}%`;
+                overlay.appendChild(line);
+
+                // Utwórz etykietę
+                const label = document.createElement('div');
+                label.className = `timeline-line-label ${lineData.labelClassName}`;
+                label.style.left = `${position}%`;
+                label.textContent = lineData.text;
+                labels.appendChild(label);
+            }
+        });
+    }
+
+    renderTable() {
+        const table = document.getElementById('timeline-table');
+        table.innerHTML = '';
+
+        // Oblicz liczbę wierszy (nagłówek + wiersze aktywności)
+        const maxRow = Math.max(0, ...this.appData.activities.map(a => a.row || 0));
+        const totalRows = maxRow + 2; // nagłówek + 1 pusty wiersz + wiersze aktywności
+
+        // Ustaw grid-template-rows
+        const rowHeights = ['25px', ...Array(totalRows - 1).fill('35px')];
+        table.style.gridTemplateRows = rowHeights.join(' ');
+
+        // Renderuj nagłówek
+        this.renderHeader();
+
+        // Renderuj wiersze aktywności
+        for (let row = 0; row < totalRows - 1; row++) {
+            this.renderActivityRow(row);
+        }
+    }
+
+    renderHeader() {
+        const table = document.getElementById('timeline-table');
+
+        // Renderuj tylko etykiety co 10 lat
+        for (let age = 10; age <= 80; age += 10) {
+            const header = document.createElement('div');
+            header.className = 'year-header';
+            header.style.gridRow = '1';
+            header.style.gridColumn = (age - 9).toString();
+
+            if (this.isAgeMode) {
+                header.textContent = age.toString();
+            } else {
+                header.textContent = (this.appData.birthYear + age).toString();
+            }
+
+            table.appendChild(header);
+        }
+    }
+
+    renderActivityRow(rowIndex) {
+        const table = document.getElementById('timeline-table');
+
+        for (let age = 10; age <= 80; age++) {
             const block = document.createElement('div');
             block.className = 'year-block';
             block.dataset.age = age;
+            block.dataset.row = rowIndex;
+            block.style.gridRow = (rowIndex + 2).toString(); // +2 bo pierwszy wiersz to nagłówek
+            block.style.gridColumn = (age - 9).toString(); // age 10 = kolumna 1
 
-            // Oznacz specjalne wieki
-            if (age === this.appData.currentAge) {
-                block.classList.add('current-age');
-            }
-            if (age === this.appData.legalRetirementAge) {
-                block.classList.add('legal-retirement');
-            }
-            if (age === this.appData.plannedRetirementAge) {
-                block.classList.add('planned-retirement');
-            }
-
-            // Sprawdź czy ten wiek ma przypisaną aktywność
-            const activity = this.findActivityForAge(age);
+            // Znajdź aktywność dla tego wieku i wiersza
+            const activity = this.findActivityForPosition(age, rowIndex);
             if (activity) {
                 block.classList.add(activity.type);
+
+                // Dodaj tekst
                 if (activity.type === 'work') {
-                    block.textContent = activity.contractType ? activity.contractType.substring(0, 3) : 'PR';
+                    block.textContent = activity.contractType ? activity.contractType.slice(0, 3) : 'PR';
                 } else if (activity.type === 'sick-leave') {
                     block.textContent = 'UZ';
                 } else if (activity.type === 'break') {
@@ -80,49 +164,29 @@ class RectangleTimeline {
                 }
             }
 
-            grid.appendChild(block);
+            table.appendChild(block);
         }
     }
 
-    renderLabels() {
-        const labelsContainer = document.getElementById('year-labels');
-        if (!labelsContainer) return;
-
-        labelsContainer.innerHTML = '';
-
-        // Etykiety co 10 lat lub co 10 lat kalendarzowych
-        for (let i = 0; i < 90; i += 10) {
-            const label = document.createElement('div');
-            label.className = 'year-label';
-
-            if (this.isAgeMode) {
-                label.textContent = (10 + i).toString();
-            } else {
-                const year = this.appData.birthYear + 10 + i;
-                label.textContent = year.toString();
-            }
-
-            labelsContainer.appendChild(label);
-        }
-    }
-
-    findActivityForAge(age) {
+    findActivityForPosition(age, row) {
         return this.appData.activities.find(activity =>
-            age >= activity.startAge && age <= activity.endAge
+            age >= activity.startAge &&
+            age <= activity.endAge &&
+            (activity.row || 0) === row
         );
     }
 
     bindEvents() {
-        const grid = document.getElementById('timeline-grid');
+        const table = document.getElementById('timeline-table');
         const modeSwitch = document.getElementById('timelineMode');
         const salarySlider = document.getElementById('salarySlider');
 
         // Timeline events
-        if (grid) {
-            grid.addEventListener('mousedown', this.onMouseDown.bind(this));
-            grid.addEventListener('mousemove', this.onMouseMove.bind(this));
-            grid.addEventListener('mouseup', this.onMouseUp.bind(this));
-            grid.addEventListener('mouseleave', this.onMouseUp.bind(this));
+        if (table) {
+            table.addEventListener('mousedown', this.onMouseDown.bind(this));
+            table.addEventListener('mousemove', this.onMouseMove.bind(this));
+            table.addEventListener('mouseup', this.onMouseUp.bind(this));
+            table.addEventListener('mouseleave', this.onMouseUp.bind(this));
         }
 
         // Mode switch
@@ -165,7 +229,6 @@ class RectangleTimeline {
         this.isSelecting = true;
         this.selectionStart = parseInt(e.target.dataset.age);
         this.selectionEnd = this.selectionStart;
-        this.selectedBlocks = [e.target];
 
         e.target.classList.add('selecting');
     }
@@ -178,7 +241,7 @@ class RectangleTimeline {
 
         const currentAge = parseInt(target.dataset.age);
 
-        // Sprawdź czy przeciągamy w prawo (tylko w prawo dozwolone)
+        // Tylko w prawo
         if (currentAge >= this.selectionStart) {
             this.selectionEnd = currentAge;
             this.updateSelection();
@@ -190,17 +253,15 @@ class RectangleTimeline {
 
         this.isSelecting = false;
 
-        // Usuń klasę selecting ze wszystkich bloków
+        // Usuń zaznaczenie
         document.querySelectorAll('.year-block.selecting').forEach(block => {
             block.classList.remove('selecting');
         });
 
-        // Jeśli zaznaczono przynajmniej jeden rok, pokaż modal
+        // Pokaż modal
         if (this.selectionEnd >= this.selectionStart) {
             this.showActivityModal();
         }
-
-        this.selectedBlocks = [];
     }
 
     updateSelection() {
@@ -209,11 +270,8 @@ class RectangleTimeline {
             block.classList.remove('selecting');
         });
 
-        // Dodaj zaznaczenie do nowego zakresu
-        const grid = document.getElementById('timeline-grid');
-        const blocks = grid.querySelectorAll('.year-block');
-
-        blocks.forEach(block => {
+        // Dodaj zaznaczenie do zakresu
+        document.querySelectorAll('.year-block').forEach(block => {
             const age = parseInt(block.dataset.age);
             if (age >= this.selectionStart && age <= this.selectionEnd) {
                 block.classList.add('selecting');
@@ -246,7 +304,6 @@ class RectangleTimeline {
         if (activityType === 'work') {
             this.showWorkDetailsModal();
         } else {
-            // Dla urlopu zdrowotnego i przerwy w pracy od razu zapisz
             this.saveActivity(activityType);
         }
     }
@@ -297,10 +354,8 @@ class RectangleTimeline {
     }
 
     saveActivity(type, contractType = null, salary = null) {
-        // Usuń istniejące aktywności w tym zakresie
-        this.appData.activities = this.appData.activities.filter(activity =>
-            !(activity.startAge <= this.selectionEnd && activity.endAge >= this.selectionStart)
-        );
+        // Znajdź odpowiedni wiersz dla nowej aktywności
+        const targetRow = this.findAvailableRow(this.selectionStart, this.selectionEnd);
 
         // Dodaj nową aktywność
         const newActivity = {
@@ -308,17 +363,37 @@ class RectangleTimeline {
             endAge: this.selectionEnd,
             type: type,
             contractType: contractType,
-            salary: salary
+            salary: salary,
+            row: targetRow
         };
 
         this.appData.activities.push(newActivity);
 
         // Przebuduj timeline
-        this.renderGrid();
+        this.renderTimeline();
         this.updatePensionDisplay();
 
-        this.showMessage(`Dodano aktywność: ${this.getActivityDisplayName(type)} 
-                         (${this.selectionStart}-${this.selectionEnd} lat)`, 'success');
+        this.showMessage(`Dodano aktywność: ${this.getActivityDisplayName(type)} (${this.selectionStart}-${this.selectionEnd} lat)`, 'success');
+    }
+
+    findAvailableRow(startAge, endAge) {
+        // Sprawdź które wiersze są zajęte w danym przedziale wiekowym
+        const occupiedRows = new Set();
+
+        this.appData.activities.forEach(activity => {
+            // Sprawdź czy aktywności się nakładają
+            if (!(activity.endAge < startAge || activity.startAge > endAge)) {
+                occupiedRows.add(activity.row || 0);
+            }
+        });
+
+        // Znajdź pierwszy wolny wiersz
+        let row = 0;
+        while (occupiedRows.has(row)) {
+            row++;
+        }
+
+        return row;
     }
 
     getActivityDisplayName(type) {
@@ -333,7 +408,7 @@ class RectangleTimeline {
     toggleTimelineMode() {
         this.isAgeMode = !this.isAgeMode;
         this.updateTimelineMode();
-        this.renderLabels();
+        this.renderTable(); // Przebuduj całą tabelę z nowymi etykietami
     }
 
     updateTimelineMode() {
@@ -342,11 +417,11 @@ class RectangleTimeline {
 
         if (this.isAgeMode) {
             label.textContent = 'Wiek życia';
-            range.textContent = '10 - 100 lat';
+            range.textContent = '10 - 80 lat';
         } else {
             label.textContent = 'Lata kalendarzowe';
             const startYear = this.appData.birthYear + 10;
-            const endYear = this.appData.birthYear + 99;
+            const endYear = this.appData.birthYear + 80;
             range.textContent = `${startYear} - ${endYear}`;
         }
     }
@@ -462,5 +537,5 @@ class RectangleTimeline {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new RectangleTimeline();
+    new DynamicTimeline();
 });
