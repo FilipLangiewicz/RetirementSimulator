@@ -1,0 +1,27 @@
+/* Kafelki daty urodzenia */
+.dob-box{
+  width: 84px;
+  height: 64px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 1.25rem;
+  outline: none;
+}
+.dob-box:focus{ border-color:#0d6efd; }
+
+/* Kroki – tylko jeden widoczny */
+.step{ display:none; opacity:0; }
+.step.active{ display:block; }
+
+/* Animacje */
+@keyframes fadeIn{ from{opacity:0; transform: translateY(6px)} to{opacity:1; transform:none} }
+@keyframes fadeOut{ from{opacity:1} to{opacity:0; transform: translateY(-6px)} }
+
+.fade-in{ animation: fadeIn .35s ease forwards; }
+.fade-out{ animation: fadeOut .25s ease forwards; }
+
+.progress{ height: 10px; }
+.progress-bar{ transition: width .3s ease; }
+
+.invalid-feedback.d-block.d-none{ display:none !important; }
