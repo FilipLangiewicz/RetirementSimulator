@@ -1,4 +1,27 @@
-.idea
-django.log
+# Python
 __pycache__/
-**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env/
+.venv/
+
+# Django logs
+*.log
+django.log
+
+# IDE / Editor
+.idea/
+.vscode/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Migrations (optional — only if you don't want them tracked)
+# */migrations/
+
+# Other
+*.sqlite3
