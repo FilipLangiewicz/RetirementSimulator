@@ -5,29 +5,52 @@
   const progressBar = document.getElementById('progressBar');
   let current = 0;
 
-  // === NOWE: konfiguracja pola roku ===
-  const yearInput = form.dob_year;
-  if (yearInput) {
-    // podpowiedzi i ograniczenia w HTML
-    yearInput.setAttribute('inputmode', 'numeric'); // klawiatura numeryczna na mobile
-    yearInput.setAttribute('pattern', '\\d{4}');    // 4 cyfry
-    yearInput.setAttribute('maxlength', '4');
-
-    // blokuj niedozwolone znaki już na wprowadzaniu
-    yearInput.addEventListener('beforeinput', (e) => {
-      // jeśli użytkownik wpisuje/wnieca coś, co zawiera nie-cyfry → blokuj
-      if (e.data && /\D/.test(e.data)) e.preventDefault();
-    });
-
-    // ostateczne czyszczenie (działa też na wklejanie, drag&drop itd.)
-    yearInput.addEventListener('input', () => {
-      const digits = yearInput.value.replace(/\D/g, '').slice(0, 4);
-      if (yearInput.value !== digits) yearInput.value = digits;
-    });
+  // --- helpery errorów ---
+  function hideErrors() {
+    form.querySelectorAll('.invalid-feedback').forEach(el => el.classList.add('d-none'));
   }
-  // === KONIEC NOWEGO ===
+  function showErr(name) {
+    const el = form.querySelector(`[data-error="${name}"]`);
+    if (el) el.classList.remove('d-none');
+  }
+  function hideErr(name) {
+    const el = form.querySelector(`[data-error="${name}"]`);
+    if (el) el.classList.add('d-none');
+  }
 
-  const showStep = (idx, direction = 1) => {
+  // --- CZYSTE sprawdzanie kroków (bez pokazywania błędów) ---
+  function checkStep(i) {
+    switch (i) {
+      case 0: {
+        const v = form.full_name.value.trim();
+        return !!v;
+      }
+      case 1: {
+        const y = (form.dob_year?.value || '').trim();
+        const isFourDigits = /^\d{4}$/.test(y);
+        const num = Number(y);
+        const thisYear = new Date().getFullYear();
+        return isFourDigits && num >= 1900 && num <= thisYear;
+      }
+      case 2: {
+        const picked = form.querySelector('input[name="gender"]:checked');
+        return !!picked;
+      }
+      default:
+        return true;
+    }
+  }
+
+  // --- pokazanie błędu dla danego kroku, gdy checkStep(i) = false ---
+  function showStepError(i) {
+    switch (i) {
+      case 0: showErr('full_name'); break;
+      case 1: showErr('dob'); break;
+      case 2: showErr('gender'); break;
+    }
+  }
+
+  const showStep = (idx) => {
     if (idx < 0 || idx >= steps.length || idx === current) return;
     const out = steps[current];
     const inside = steps[idx];
@@ -47,68 +70,64 @@
     if (progressBar) progressBar.style.width = pct + '%';
   };
 
+  // --- NEXT / PREV: pokazuj błąd tylko po kliknięciu „Dalej” ---
   form.addEventListener('click', (e) => {
     if (e.target.closest('.next-btn')) {
-      if (validateStep(current)) showStep(current + 1, +1);
+      // schowaj wcześniejsze komunikaty zanim sprawdzisz
+      hideErrors();
+      if (checkStep(current)) {
+        showStep(current + 1);
+      } else {
+        // pokaż błąd tylko dla bieżącego kroku
+        showStepError(current);
+      }
     }
     if (e.target.closest('.prev-btn')) {
-      showStep(current - 1, -1);
+      // przechodząc wstecz nic nie walidujemy i nic nie pokazujemy
+      showStep(current - 1);
     }
   });
 
-  function validateStep(i) {
-    hideErrors();
-    switch (i) {
-      case 0: {
-        const v = form.full_name.value.trim();
-        if (!v) return showErr('full_name');
-        return true;
-      }
-      case 1: {
-        const y = (form.dob_year?.value || '').trim();
-        const isFourDigits = /^\d{4}$/.test(y);
-        const num = Number(y);
-        const thisYear = new Date().getFullYear();
-        const valid = isFourDigits && num >= 1900 && num <= thisYear;
-        if (!valid) return showErr('dob');
-        return true;
-      }
-      case 2: {
-        const picked = form.querySelector('input[name="gender"]:checked');
-        if (!picked) return showErr('gender');
-        return true;
-      }
-      default:
-        return true;
-    }
-  }
-
-  function hideErrors() {
-    form.querySelectorAll('.invalid-feedback').forEach(el => el.classList.add('d-none'));
-  }
-  function showErr(name) {
-    const el = form.querySelector(`[data-error="${name}"]`);
-    if (el) el.classList.remove('d-none');
-    return false;
-  }
-
+  // --- SUBMIT: waliduj wszystko, ale pokaż błąd tylko dla PIERWSZEGO błędnego kroku ---
   form.addEventListener('submit', (e) => {
     hideErrors();
-    let ok = true;
-    [0, 1, 2].forEach(i => { if (ok) ok = validateStep(i); });
-    const val = Number(form.target_pension.value);
-    if (!(val > 0)) { showErr('target_pension'); ok = false; }
-    if (!ok) {
+
+    // sprawdź kroki 0..2
+    const firstErrStep = [0, 1, 2].find(i => !checkStep(i));
+
+    // sprawdź pole z emeryturą
+    const pensionVal = Number(form.target_pension.value);
+    const pensionOk = pensionVal > 0;
+
+    if (firstErrStep !== undefined || !pensionOk) {
       e.preventDefault();
-      const firstErrStep = [0, 1, 2, 3].find(i => {
-        if (i === 3) return !(val > 0);
-        return !validateStep(i);
-      });
-      if (firstErrStep !== undefined) showStep(firstErrStep);
+      if (firstErrStep !== undefined) {
+        showStepError(firstErrStep);   // pokaż tylko ten jeden błąd
+        showStep(firstErrStep);        // przenieś użytkownika do tego kroku
+      } else {
+        showErr('target_pension');
+        showStep(3); // jeśli to masz jako krok 3 – dopasuj jeśli inny index
+      }
     }
   });
 
-  // === PRZENIESIONE DO ŚRODKA: dynamiczne pytanie emerytalne wg płci ===
+  // --- (opcjonalnie) twarde ograniczenia wejścia dla roku ---
+  const yearInput = form.dob_year;
+  if (yearInput) {
+    yearInput.setAttribute('inputmode', 'numeric');
+    yearInput.setAttribute('pattern', '\\d{4}');
+    yearInput.setAttribute('maxlength', '4');
+    yearInput.addEventListener('beforeinput', (e) => {
+      if (e.data && /\D/.test(e.data)) e.preventDefault();
+    });
+    yearInput.addEventListener('input', () => {
+      const digits = yearInput.value.replace(/\D/g, '').slice(0, 4);
+      if (yearInput.value !== digits) yearInput.value = digits;
+      // nie pokazuj błędów tutaj – tylko koryguj wartość
+    });
+  }
+
+  // --- Twoje dynamiczne pytanie wg płci (bez zmian w logice błędów) ---
   const genderInputs = form.querySelectorAll('input[name="gender"]');
   const pensionQuestion = document.getElementById('pensionQuestion');
   genderInputs.forEach(input => {
@@ -121,7 +140,6 @@
       }
     });
   });
-  // === KONIEC PRZENIESIONYCH ===
 
   updateProgress();
 })();
