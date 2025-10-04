@@ -8,8 +8,10 @@ from .models import ContractType
 
 def home(request):
     """Strona główna - rozpoczęcie symulacji emerytalnej"""
-    return render(request, 'simulator/home.html')
+    return render(request, 'simulator/Strona główna - ZUS.html')
 
+def app_home(request):
+    return render(request, "simulator/home.html")
 
 def dashboard(request):
     """Dashboard z timeline prostokątów - tryb demo bez logowania"""

@@ -1,0 +1,45 @@
+window.consentCookie = {
+    getCookieByName: (name) => {
+        let cookieArr = document.cookie.split(";");
+
+        for (let i = 0; i < cookieArr.length; i++) {
+            let cookiePair = cookieArr[i].split("=");
+
+            if (name === cookiePair[0].trim()) {
+                return decodeURIComponent(cookiePair[1]);
+            }
+        }
+        return null;
+    },
+
+    getConsentCookie: () => {
+        const cookieValue = window.consentCookie.getCookieByName('COOKIE_CONSENT');
+        const decodedValue = decodeURIComponent(cookieValue);
+        const jsonValue = JSON.parse(decodedValue);
+
+        return jsonValue;
+    },
+
+    updateCookieConsent: (analytics) => {
+        consent = {
+            ANALYTICS: analytics
+        };
+
+        let updatedConsent = encodeURIComponent(JSON.stringify(consent));
+
+        const date = new Date();
+        date.setTime(date.getTime() + (400 * 24 * 60 * 60 * 1000));
+
+        const getRootDomain = () => {
+            let parts = window.location.hostname.split('.').reverse();
+            if (parts.length >= 2) {
+                return parts[1] + '.' + parts[0];
+            }
+            return window.location.hostname;
+        }
+
+        document.cookie = 'COOKIE_CONSENT=' + updatedConsent + ';domain= ' + getRootDomain() + '; expires=' + date.toUTCString() + '; path=/';
+
+        window.dispatchEvent(new Event('consent-change'));
+    }
+};

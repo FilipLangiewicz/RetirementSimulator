@@ -1,0 +1,47 @@
+/* Upewnij się, że rząd kafli jest flexem i może się zawijać */
+#expandableBoxes .row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+}
+
+/* KAFEL – 6 w rzędzie na desktopie, 3 na md, 2 na xs */
+#expandableBoxes .expandable-boxes__item {
+  display: contents !important;             /* sprawia, że <a> i panel są flex-itemami */
+}
+
+#expandableBoxes .expandable-boxes__item > a {
+  flex: 0 0 16.6667% !important;
+  max-width: 16.6667% !important;
+  width: 16.6667% !important;
+}
+
+@media (max-width: 1199.98px) {
+  #expandableBoxes .expandable-boxes__item > a {
+    flex: 0 0 33.3333% !important;
+    max-width: 33.3333% !important;
+    width: 33.3333% !important;
+  }
+}
+@media (max-width: 575.98px) {
+  #expandableBoxes .expandable-boxes__item > a {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+    width: 50% !important;
+  }
+}
+
+/* PANEL – zawsze pełna szerokość sekcji (czyli 6/3/2 kolumn) */
+#expandableBoxes .expandable-boxes__item > .expandable-boxes__item-content {
+  display: none;
+  flex: 0 0 100% !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: none !important;
+}
+
+/* Pokaż panel tylko dla aktywnego kafla (klasę .active nadaje ich JS) */
+#expandableBoxes .expandable-boxes__item > a.active + .expandable-boxes__item-content {
+  display: block !important;
+}

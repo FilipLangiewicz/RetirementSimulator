@@ -46,48 +46,54 @@ class DynamicTimeline {
     renderVerticalLines() {
         const overlay = document.getElementById('timeline-overlay');
         const labels = document.getElementById('timeline-line-labels');
-
         if (!overlay || !labels) return;
-
-        // Wyczyść poprzednie linie
         overlay.innerHTML = '';
         labels.innerHTML = '';
 
-        // Dane o liniach
+        // Aktualny rok
+        const currentYear = new Date().getFullYear();
+        // Rok ustawowego wieku emerytalnego
+        const legalYear = this.appData.birthYear + this.appData.legalRetirementAge;
+        // Rok planowanego wieku emerytalnego
+        const plannedYear = this.appData.birthYear + this.appData.plannedRetirementAge;
+
         const lines = [
             {
-                age: this.appData.currentAge,
+                posAge: this.appData.currentAge,
                 className: 'current-age-line',
                 labelClassName: 'current-age-label',
-                text: `Obecny wiek (${this.appData.currentAge})`
+                text: this.isAgeMode
+                    ? `Obecny wiek (${this.appData.currentAge})`
+                    : `Obecny rok (${currentYear})`
             },
             {
-                age: this.appData.legalRetirementAge,
+                posAge: this.appData.legalRetirementAge,
                 className: 'legal-retirement-line',
                 labelClassName: 'legal-retirement-label',
-                text: `Ustawowy wiek emerytury (${this.appData.legalRetirementAge})`
+                text: this.isAgeMode
+                    ? `Ustawowy wiek emerytury (${this.appData.legalRetirementAge})`
+                    : `Ustawowy rok emerytury (${legalYear})`
             },
             {
-                age: this.appData.plannedRetirementAge,
+                posAge: this.appData.plannedRetirementAge,
                 className: 'planned-retirement-line',
                 labelClassName: 'planned-retirement-label',
-                text: `Planowany wiek emerytury (${this.appData.plannedRetirementAge})`
+                text: this.isAgeMode
+                    ? `Planowany wiek emerytury (${this.appData.plannedRetirementAge})`
+                    : `Planowany rok emerytury (${plannedYear})`
             }
         ];
 
         lines.forEach(lineData => {
-            // Sprawdź czy wiek jest w zakresie 10-80
-            if (lineData.age >= 10 && lineData.age <= 80) {
-                // Oblicz pozycję (kolumna wieku - 9 = pozycja w siatce)
-                const position = ((lineData.age - 10) / 70) * 100; // procent szerokości
-
-                // Utwórz linię
+            const age = lineData.posAge;
+            if (age >= 10 && age <= 80) {
+                const position = ((age - 10) / 70) * 100;
+                // Pionowa linia
                 const line = document.createElement('div');
                 line.className = `timeline-vertical-line ${lineData.className}`;
                 line.style.left = `${position}%`;
                 overlay.appendChild(line);
-
-                // Utwórz etykietę
+                // Etykieta pod tabelą
                 const label = document.createElement('div');
                 label.className = `timeline-line-label ${lineData.labelClassName}`;
                 label.style.left = `${position}%`;
@@ -409,6 +415,7 @@ class DynamicTimeline {
         this.isAgeMode = !this.isAgeMode;
         this.updateTimelineMode();
         this.renderTable(); // Przebuduj całą tabelę z nowymi etykietami
+        this.renderVerticalLines();
     }
 
     updateTimelineMode() {
