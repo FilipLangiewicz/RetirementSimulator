@@ -1,11 +1,10 @@
 /**
  * Timeline interaktywny dla Symulatora Emerytalnego ZUS
- * Wersja z wiekiem na osi X (10-100 lat) bez przewijania
+ * Wersja demo bez backendu - wszystko w pamięci lokalnej
  */
 
 class RetirementTimeline {
     constructor() {
-        this.timelineData = null;
         this.isSelecting = false;
         this.selectionStart = null;
         this.selectionEnd = null;
@@ -13,35 +12,23 @@ class RetirementTimeline {
         this.currentWorkPeriodId = null;
         this.minAge = 10;
         this.maxAge = 100;
-        this.currentAge = 30; // domyślny wiek
+
+        // Domyślne dane aplikacji
+        this.appData = {
+            currentAge: 30,
+            gender: 'M',
+            legalRetirementAge: 65,
+            plannedRetirementAge: 65,
+            workPeriods: []
+        };
 
         this.init();
     }
 
     init() {
-        // Load timeline data from JSON script tag
-        const dataElement = document.getElementById('timeline-data');
-        if (dataElement) {
-            this.timelineData = JSON.parse(dataElement.textContent);
-            this.currentAge = this.timelineData.current_age || 30;
-            this.setupTimeline();
-            this.bindEvents();
-        } else {
-            // Fallback dla trybu bez logowania
-            this.setupDefaultTimeline();
-            this.bindEvents();
-        }
-    }
-
-    setupDefaultTimeline() {
-        // Domyślne dane dla trybu bez logowania
-        this.timelineData = {
-            current_age: 30,
-            legal_retirement_age: 65,
-            planned_retirement_age: 65,
-            work_periods: []
-        };
-        this.currentAge = 30;
+        this.setupTimeline();
+        this.bindEvents();
+        this.updatePensionDisplay();
     }
 
     setupTimeline() {
@@ -72,18 +59,15 @@ class RetirementTimeline {
         const plannedLine = document.getElementById('planned-retirement-line');
 
         if (currentLine) {
-            currentLine.style.left = this.ageToPixel(this.currentAge) + '%';
+            currentLine.style.left = this.ageToPixel(this.appData.currentAge) + '%';
         }
 
-        const legalAge = this.timelineData?.legal_retirement_age || 65;
-        const plannedAge = this.timelineData?.planned_retirement_age || 65;
-
         if (legalLine) {
-            legalLine.style.left = this.ageToPixel(legalAge) + '%';
+            legalLine.style.left = this.ageToPixel(this.appData.legalRetirementAge) + '%';
         }
 
         if (plannedLine) {
-            plannedLine.style.left = this.ageToPixel(plannedAge) + '%';
+            plannedLine.style.left = this.ageToPixel(this.appData.plannedRetirementAge) + '%';
         }
     }
 
@@ -96,11 +80,9 @@ class RetirementTimeline {
         existingPeriods.forEach(period => period.remove());
 
         // Add work periods
-        if (this.timelineData && this.timelineData.work_periods) {
-            this.timelineData.work_periods.forEach(period => {
-                this.createWorkPeriodElement(period);
-            });
-        }
+        this.appData.workPeriods.forEach(period => {
+            this.createWorkPeriodElement(period);
+        });
     }
 
     createWorkPeriodElement(period) {
@@ -109,24 +91,17 @@ class RetirementTimeline {
 
         const element = document.createElement('div');
 
-        // Konwersja lat na wiek
-        const birthYear = 2025 - this.currentAge;
-        const startAge = period.start_year - birthYear;
-        const endAge = period.end_year - birthYear;
-
-        element.className = `work-period ${this.getContractTypeClass(period.contract_type)}`;
-        element.style.left = this.ageToPixel(startAge) + '%';
-        element.style.width = this.ageToPixel(endAge - startAge) + '%';
-        element.textContent = period.contract_type;
+        element.className = `work-period ${this.getContractTypeClass(period.contractType)}`;
+        element.style.left = this.ageToPixel(period.startAge) + '%';
+        element.style.width = this.ageToPixel(period.endAge - period.startAge) + '%';
+        element.textContent = period.contractType;
         element.dataset.periodId = period.id;
-        element.dataset.startAge = startAge;
-        element.dataset.endAge = endAge;
 
         // Add accessibility attributes
         element.setAttribute('role', 'button');
         element.setAttribute('tabindex', '0');
         element.setAttribute('aria-label',
-            `Okres pracy: ${period.contract_type}, wiek ${startAge}-${endAge}, ${period.salary} zł`);
+            `Okres pracy: ${period.contractType}, wiek ${period.startAge}-${period.endAge}, ${period.salary} zł`);
 
         timeline.appendChild(element);
     }
@@ -147,7 +122,6 @@ class RetirementTimeline {
         const plannedLine = document.getElementById('planned-retirement-line');
 
         if (timeline) {
-            // Timeline drag selection events
             timeline.addEventListener('mousedown', this.onTimelineMouseDown.bind(this));
             timeline.addEventListener('click', this.onWorkPeriodClick.bind(this));
             timeline.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -247,7 +221,7 @@ class RetirementTimeline {
         } else if (this.isDraggingPlannedRetirement) {
             this.isDraggingPlannedRetirement = false;
             document.body.style.cursor = '';
-            this.savePlannedRetirement();
+            this.updatePensionDisplay();
         }
     }
 
@@ -297,9 +271,7 @@ class RetirementTimeline {
         if (plannedLine) {
             plannedLine.style.left = this.ageToPixel(age) + '%';
         }
-        if (this.timelineData) {
-            this.timelineData.planned_retirement_age = age;
-        }
+        this.appData.plannedRetirementAge = age;
     }
 
     showWorkPeriodModal(startAge, endAge) {
@@ -324,15 +296,8 @@ class RetirementTimeline {
     }
 
     editWorkPeriod(periodId) {
-        if (!this.timelineData || !this.timelineData.work_periods) return;
-
-        const period = this.timelineData.work_periods.find(p => p.id == periodId);
+        const period = this.appData.workPeriods.find(p => p.id == periodId);
         if (!period) return;
-
-        // Konwersja lat na wiek
-        const birthYear = 2025 - this.currentAge;
-        const startAge = period.start_year - birthYear;
-        const endAge = period.end_year - birthYear;
 
         this.currentWorkPeriodId = periodId;
 
@@ -344,15 +309,15 @@ class RetirementTimeline {
         const deleteBtn = document.getElementById('deleteWorkPeriod');
 
         if (title) title.textContent = 'Edytuj okres pracy';
-        if (startField) startField.value = startAge;
-        if (endField) endField.value = endAge;
+        if (startField) startField.value = period.startAge;
+        if (endField) endField.value = period.endAge;
         if (salaryField) salaryField.value = period.salary;
         if (deleteBtn) deleteBtn.style.display = 'block';
 
         // Set contract type
         if (contractSelect) {
             for (let option of contractSelect.options) {
-                if (option.value == period.contract_type_id) {
+                if (option.textContent === period.contractType) {
                     option.selected = true;
                     break;
                 }
@@ -363,91 +328,33 @@ class RetirementTimeline {
         modal.show();
     }
 
-    async saveWorkPeriod() {
-        const contractType = document.getElementById('contractType');
+    saveWorkPeriod() {
+        const contractSelect = document.getElementById('contractType');
         const startAge = document.getElementById('startAge');
         const endAge = document.getElementById('endAge');
         const salary = document.getElementById('salaryGross');
 
-        if (!contractType || !startAge || !endAge || !salary) return;
+        if (!contractSelect || !startAge || !endAge || !salary) return;
 
-        // Konwersja wieku na lata
-        const birthYear = 2025 - this.currentAge;
-        const startYear = birthYear + parseInt(startAge.value);
-        const endYear = birthYear + parseInt(endAge.value);
+        const contractType = contractSelect.options[contractSelect.selectedIndex].text;
 
-        const formData = {
-            action: this.currentWorkPeriodId ? 'update' : 'create',
-            contract_type_id: parseInt(contractType.value),
-            start_year: startYear,
-            end_year: endYear,
-            salary_gross_monthly: parseFloat(salary.value)
-        };
-
-        if (this.currentWorkPeriodId) {
-            formData.work_period_id = this.currentWorkPeriodId;
-        }
-
-        // W trybie demo (bez backendu) tylko symulujemy zapis
-        if (!this.timelineData || !this.timelineData.work_periods) {
-            this.simulateWorkPeriodSave(formData);
-            return;
-        }
-
-        try {
-            const response = await fetch('/ajax/work-period/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    this.updateTimelineData();
-                    bootstrap.Modal.getInstance(document.getElementById('workPeriodModal')).hide();
-                    this.showMessage('Okres pracy został zapisany', 'success');
-                } else {
-                    this.showMessage('Błąd: ' + (data.error || 'Nie udało się zapisać'), 'error');
-                }
-            }
-        } catch (error) {
-            // Fallback do trybu demo
-            this.simulateWorkPeriodSave(formData);
-        }
-    }
-
-    simulateWorkPeriodSave(formData) {
-        // Symulacja zapisania w trybie demo
-        if (!this.timelineData) {
-            this.timelineData = {
-                current_age: this.currentAge,
-                legal_retirement_age: 65,
-                planned_retirement_age: 65,
-                work_periods: []
-            };
-        }
-
-        const newPeriod = {
-            id: Date.now(),
-            start_year: formData.start_year,
-            end_year: formData.end_year,
-            contract_type: 'Umowa o pracę', // domyślnie
-            contract_type_id: formData.contract_type_id,
-            salary: formData.salary_gross_monthly
+        const periodData = {
+            id: this.currentWorkPeriodId || Date.now(),
+            startAge: parseInt(startAge.value),
+            endAge: parseInt(endAge.value),
+            contractType: contractType,
+            salary: parseFloat(salary.value)
         };
 
         if (this.currentWorkPeriodId) {
             // Update existing
-            const index = this.timelineData.work_periods.findIndex(p => p.id == this.currentWorkPeriodId);
+            const index = this.appData.workPeriods.findIndex(p => p.id == this.currentWorkPeriodId);
             if (index !== -1) {
-                this.timelineData.work_periods[index] = {...this.timelineData.work_periods[index], ...newPeriod};
+                this.appData.workPeriods[index] = periodData;
             }
         } else {
             // Add new
-            this.timelineData.work_periods.push(newPeriod);
+            this.appData.workPeriods.push(periodData);
         }
 
         this.renderWorkPeriods();
@@ -456,103 +363,77 @@ class RetirementTimeline {
         this.showMessage('Okres pracy został zapisany', 'success');
     }
 
-    async deleteWorkPeriod() {
+    deleteWorkPeriod() {
         if (!this.currentWorkPeriodId) return;
 
         if (!confirm('Czy na pewno chcesz usunąć ten okres pracy?')) {
             return;
         }
 
-        try {
-            const response = await fetch('/ajax/work-period/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'delete',
-                    work_period_id: this.currentWorkPeriodId
-                })
-            });
+        this.appData.workPeriods = this.appData.workPeriods.filter(
+            p => p.id != this.currentWorkPeriodId
+        );
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    this.updateTimelineData();
-                    bootstrap.Modal.getInstance(document.getElementById('workPeriodModal')).hide();
-                    this.showMessage('Okres pracy został usunięty', 'success');
-                }
-            }
-        } catch (error) {
-            // Fallback - usuń z pamięci lokalnej
-            if (this.timelineData && this.timelineData.work_periods) {
-                this.timelineData.work_periods = this.timelineData.work_periods.filter(
-                    p => p.id != this.currentWorkPeriodId
-                );
-                this.renderWorkPeriods();
-                this.updatePensionDisplay();
-                bootstrap.Modal.getInstance(document.getElementById('workPeriodModal')).hide();
-                this.showMessage('Okres pracy został usunięty', 'success');
-            }
-        }
+        this.renderWorkPeriods();
+        this.updatePensionDisplay();
+        bootstrap.Modal.getInstance(document.getElementById('workPeriodModal')).hide();
+        this.showMessage('Okres pracy został usunięty', 'success');
     }
 
     saveProfile() {
         const ageInput = document.getElementById('profileAge');
         const genderInput = document.getElementById('profileGender');
-        const retirementInput = document.getElementById('profileRetirementYear');
 
         if (ageInput) {
-            this.currentAge = parseInt(ageInput.value) || 30;
+            this.appData.currentAge = parseInt(ageInput.value) || 30;
+        }
+
+        if (genderInput) {
+            this.appData.gender = genderInput.value;
+            this.appData.legalRetirementAge = genderInput.value === 'K' ? 60 : 65;
         }
 
         // Aktualizuj timeline
         this.renderTimelineLines();
-        this.renderAgeLabels();
-        this.renderWorkPeriods();
         this.updatePensionDisplay();
 
         // Aktualizuj wyświetlane dane
         const currentAgeDisplay = document.getElementById('current-age');
         if (currentAgeDisplay) {
-            currentAgeDisplay.textContent = this.currentAge;
+            currentAgeDisplay.textContent = this.appData.currentAge;
         }
 
         bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
         this.showMessage('Profil został zaktualizowany', 'success');
     }
 
-    async savePlannedRetirement() {
-        // W trybie demo tylko aktualizuj interfejs
-        this.updatePensionDisplay();
-        this.showMessage('Planowany wiek emerytury został zmieniony', 'success');
-    }
-
-    async updateTimelineData() {
-        // Przeładuj dane i przelicz emeryturę
-        this.renderWorkPeriods();
-        this.updatePensionDisplay();
-    }
-
     updatePensionDisplay() {
         // Prosta kalkulacja demonstracyjna
-        if (!this.timelineData || !this.timelineData.work_periods) return;
-
         let totalYears = 0;
         let totalContributions = 0;
 
-        this.timelineData.work_periods.forEach(period => {
-            const years = period.end_year - period.start_year + 1;
+        this.appData.workPeriods.forEach(period => {
+            const years = period.endAge - period.startAge;
             totalYears += years;
-            totalContributions += (period.salary || 0) * 12 * years * 0.1952; // 19.52% składka
+
+            // Różne stawki składek w zależności od typu umowy
+            let contributionRate = 0.1952; // 19.52% dla większości umów
+            if (period.contractType === 'Umowa o dzieło' || period.contractType === 'Umowa B2B') {
+                contributionRate = 0; // 0% dla tych umów
+            }
+
+            totalContributions += (period.salary || 0) * 12 * years * contributionRate;
         });
 
-        const estimatedPension = totalContributions / 200; // uproszczone
+        // Uproszczone wyliczenie emerytury (kapitał / oczekiwana długość życia)
+        const lifeExpectancyMonths = this.appData.gender === 'K' ? 260 : 220; // miesiące
+        const estimatedPension = totalContributions / lifeExpectancyMonths;
 
         // Aktualizuj UI
         const pensionAmount = document.getElementById('pension-amount');
         const workYears = document.getElementById('work-years');
         const totalContrib = document.getElementById('total-contributions');
+        const retirementAge = document.getElementById('retirement-age');
 
         if (pensionAmount) {
             pensionAmount.textContent = estimatedPension.toLocaleString('pl-PL', {
@@ -567,6 +448,10 @@ class RetirementTimeline {
 
         if (totalContrib) {
             totalContrib.textContent = Math.round(totalContributions);
+        }
+
+        if (retirementAge) {
+            retirementAge.textContent = this.appData.plannedRetirementAge;
         }
     }
 
