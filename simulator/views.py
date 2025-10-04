@@ -1,6 +1,5 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render, redirect
+from django.urls import reverse
 import json
 from datetime import date
 
@@ -96,5 +95,5 @@ def conversation_profile(request):
         }
         request.session["profile_conversation"] = data
         # TODO: tu możesz zapisać do modelu Użytkownika / Profilu
-        return redirect(reverse("dashboard"))  # albo gdzie wolisz
+        return redirect(reverse("simulator:dashboard"))  # albo gdzie wolisz
     return render(request, "simulator/conversation_form.html")

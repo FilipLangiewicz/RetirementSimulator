@@ -1,10 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+
+{% extends "simulator/base.html" %}
+{% load static %}
+
+{% block title %}Twój profil – rozmowa{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'simulator/css/conversation.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-body p-4 p-md-5">
+
+          <!-- Pasek postępu -->
+          <div class="progress mb-4" role="progressbar" aria-label="Postęp" aria-valuemin="0" aria-valuemax="100">
+            <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+          </div>
+
+          <form id="conversationForm" method="post" novalidate>
+            {% csrf_token %}
+
+            <!-- KROK 1 -->
+            <section class="step active fade-in" data-step="1">
+              <h2 class="h3 fw-bold mb-3 text-center">Zanim zaczniemy, jak się nazywasz? <span class="ms-1">:)</span></h2>
+              <input type="text" class="form-control form-control-lg" name="full_name" placeholder="imię" required>
+              <div class="invalid-feedback d-block small mt-2 d-none" data-error="full_name">Wpisz proszę swoje imię.</div>
+              <div class="mt-4 d-flex justify-content-end">
+                <button type="button" class="btn btn-primary btn-lg next-btn">Dalej</button>
+              </div>
+            </section>
+
+            <!-- KROK 2 -->
+            <section class="step" data-step="2">
+              <h2 class="h3 fw-bold mb-3 text-center">Podaj rok urodzenia</h2>
+
+              <div class="d-flex gap-3 justify-content-center">
+                <input class="dob-box" type="text" inputmode="numeric" name="dob_year" maxlength="4" placeholder="RRRR" required>
+              </div>
+              <div class="invalid-feedback d-block small mt-2 text-center d-none" data-error="dob">Wpisz poprawną datę.</div>
+
+              <div class="mt-4 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-lg prev-btn">Wstecz</button>
+                <button type="button" class="btn btn-primary btn-lg next-btn">Dalej</button>
+              </div>
+            </section>
+
+            <!-- KROK 3 -->
+            <section class="step" data-step="3">
+              <h2 class="h3 fw-bold mb-4 text-center">Podaj swoją płeć</h2>
+              <div class="d-flex gap-3 justify-content-center">
+                <input type="radio" class="btn-check" name="gender" id="g_m" value="Mężczyzna" autocomplete="off">
+                <label class="btn btn-outline-primary btn-lg px-4" for="g_m">Mężczyzna</label>
+
+                <input type="radio" class="btn-check" name="gender" id="g_k" value="Kobieta" autocomplete="off">
+                <label class="btn btn-outline-primary btn-lg px-4" for="g_k">Kobieta</label>
+              </div>
+              <div class="invalid-feedback d-block small mt-2 text-center d-none" data-error="gender">Wybierz jedną opcję.</div>
+
+              <div class="mt-4 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-lg prev-btn">Wstecz</button>
+                <button type="button" class="btn btn-primary btn-lg next-btn">Dalej</button>
+              </div>
+            </section>
+
+            <!-- KROK 4 (FINAŁ) -->
+            <section class="step" data-step="4">
+              <h2 class="h3 fw-bold mb-3 text-center">A teraz przejdźmy do konkretów. Jaką chciałbyś mieć emeryturę?</h2>
+              <div class="input-group input-group-lg">
+                <input type="number" min="0" step="100" class="form-control" name="target_pension" placeholder="6000">
+                <span class="input-group-text">PLN / msc</span>
+              </div>
+              <div class="invalid-feedback d-block small mt-2 d-none" data-error="target_pension">Podaj kwotę (liczbę większą od 0).</div>
+
+              <div class="mt-4 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-lg prev-btn">Wstecz</button>
+                <button type="submit" class="btn btn-success btn-lg">Zapisz i przejdź dalej</button>
+              </div>
+            </section>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'simulator/js/conversation.js' %}"></script>
+{% endblock %}

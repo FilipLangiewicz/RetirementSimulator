@@ -16,11 +16,12 @@
                 </p>
 
                 <div class="d-grid gap-3 d-md-flex justify-content-md-center">
-                    <a href="{% url 'simulator:dashboard' %}" class="btn btn-zus-primary btn-lg px-5">
+                    <a href="{% url 'simulator:conversation_profile' %}" class="btn btn-zus-primary btn-lg px-5" style="position: relative; z-index: 10;">
                         <i class="bi bi-play-circle me-2"></i>
-                        Rozpocznij Symulację
+                        Rozpocznij symulację
                     </a>
-                    <a href="#features" class="btn btn-outline-light btn-lg px-5">
+
+                    <a href="#features" class="btn btn-outline-light btn-lg px-5" style="position: relative; z-index: 10;">
                         <i class="bi bi-info-circle me-2"></i>
                         Dowiedz się więcej
                     </a>
@@ -129,9 +130,9 @@
         </div>
 
         <div class="text-center mt-5">
-            <a href="{% url 'simulator:dashboard' %}" class="btn btn-zus-primary btn-lg">
+            <a href="{% url 'simulator:conversation_profile' %}" class="btn btn-zus-primary btn-lg">
                 <i class="bi bi-arrow-right me-2"></i>
-                Przejdź do Dashboardu
+                Przejdź do Symulatora
             </a>
         </div>
     </div>
@@ -271,9 +272,9 @@
                 <p class="lead mb-4">
                     Poznaj swoją przyszłą emeryturę już dziś. Symulacja zajmuje tylko kilka minut.
                 </p>
-                <a href="{% url 'simulator:dashboard' %}" class="btn btn-zus-primary btn-lg px-5">
+                <a href="{% url 'simulator:conversation_profile' %}" class="btn btn-zus-primary btn-lg px-5">
                     <i class="bi bi-rocket-takeoff me-2"></i>
-                    Rozpocznij Symulację Teraz
+                    Rozpocznij symulację teraz
                 </a>
             </div>
         </div>
