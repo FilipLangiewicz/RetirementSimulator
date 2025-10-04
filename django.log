@@ -217,3 +217,9 @@ D:\STUDIA\ZZ_Inne\HackYeah\repo\RetirementSimulator\RetirementSimulator\urls.py 
 Watching for file changes with StatReloader
 D:\STUDIA\ZZ_Inne\HackYeah\repo\RetirementSimulator\RetirementSimulator\urls.py changed, reloading.
 Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+"GET / HTTP/1.1" 200 14553
+"GET /dashboard/ HTTP/1.1" 200 18749
+"GET /static/simulator/js/timeline.js HTTP/1.1" 304 0
+D:\STUDIA\ZZ_Inne\HackYeah\repo\RetirementSimulator\simulator\views.py changed, reloading.
+Watching for file changes with StatReloader
