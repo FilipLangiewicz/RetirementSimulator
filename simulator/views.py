@@ -82,3 +82,19 @@ def dashboard(request):
     }
 
     return render(request, 'simulator/dashboard.html', context)
+
+
+def conversation_profile(request):
+    if request.method == "POST":
+        data = {
+            "full_name": request.POST.get("full_name", "").strip(),
+            "dob_day": request.POST.get("dob_day"),
+            "dob_month": request.POST.get("dob_month"),
+            "dob_year": request.POST.get("dob_year"),
+            "gender": request.POST.get("gender"),
+            "target_pension": request.POST.get("target_pension"),
+        }
+        request.session["profile_conversation"] = data
+        # TODO: tu możesz zapisać do modelu Użytkownika / Profilu
+        return redirect(reverse("dashboard"))  # albo gdzie wolisz
+    return render(request, "simulator/conversation_form.html")
