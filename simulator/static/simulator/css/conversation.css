@@ -25,3 +25,8 @@
 .progress-bar{ transition: width .3s ease; }
 
 .invalid-feedback.d-block.d-none{ display:none !important; }
+
+input[name="target_pension"]::placeholder {
+  color: #b6b6b6;
+  opacity: 1;
+}
