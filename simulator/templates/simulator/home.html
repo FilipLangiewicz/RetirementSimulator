@@ -1,0 +1,282 @@
+{% extends 'simulator/base.html' %}
+
+{% block title %}Symulator Emerytalny ZUS - Strona Główna{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center min-vh-50">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="display-4 fw-bold text-white mb-4">
+                    Symulator Systemu Emerytalnego
+                </h1>
+                <p class="lead text-white mb-5">
+                    Sprawdź, jaka będzie Twoja przyszła emerytura na podstawie aktualnych przepisów ZUS.
+                    Stwórz interaktywny plan swojego życia zawodowego i poznaj przewidywaną wysokość świadczenia.
+                </p>
+
+                <div class="d-grid gap-3 d-md-flex justify-content-md-center">
+                    <a href="{% url 'simulator:dashboard' %}" class="btn btn-zus-primary btn-lg px-5">
+                        <i class="bi bi-play-circle me-2"></i>
+                        Rozpocznij Symulację
+                    </a>
+                    <a href="#features" class="btn btn-outline-light btn-lg px-5">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Dowiedz się więcej
+                    </a>
+                </div>
+
+                <div class="mt-4">
+                    <p class="text-white-50 mb-0">
+                        <i class="bi bi-shield-check me-2"></i>
+                        Nie wymaga rejestracji - zacznij od razu!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<section id="features" class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center mb-5">
+                <h2 class="display-5 fw-bold mb-3">Funkcje Symulatora</h2>
+                <p class="lead text-muted">
+                    Nowoczesne narzędzie do planowania emerytury zgodne z przepisami ZUS
+                </p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon zus-primary">
+                        <i class="bi bi-timeline"></i>
+                    </div>
+                    <h4>Interaktywny Timeline</h4>
+                    <p>
+                        Wizualizuj swoje życie zawodowe na interaktywnej osi czasu.
+                        Timeline pokazuje wiek od 10 do 100 lat z możliwością przeciągania okresów pracy.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon zus-secondary">
+                        <i class="bi bi-calculator"></i>
+                    </div>
+                    <h4>Precyzyjne Obliczenia</h4>
+                    <p>
+                        Kalkulacje zgodne z aktualnymi przepisami ZUS 2025, uwzględniające
+                        wszystkie typy umów i stawki składek emerytalnych.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon zus-accent">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h4>Analizy w Czasie Rzeczywistym</h4>
+                    <p>
+                        Natychmiastowe przeliczanie emerytury przy każdej zmianie.
+                        Szczegółowe statystyki i prognozy finansowe.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How it works -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center mb-5">
+                <h2 class="display-5 fw-bold mb-3">Jak to działa?</h2>
+                <p class="text-muted">Prosta ścieżka do poznania swojej przyszłej emerytury</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-3 text-center">
+                <div class="step-circle zus-primary mb-3">1</div>
+                <h5>Otwórz Dashboard</h5>
+                <p class="small">Przejdź do głównego dashboardu bez konieczności rejestracji</p>
+            </div>
+
+            <div class="col-md-3 text-center">
+                <div class="step-circle zus-secondary mb-3">2</div>
+                <h5>Ustaw Dane</h5>
+                <p class="small">Wprowadź swój wiek i płeć w modalnym oknie profilu</p>
+            </div>
+
+            <div class="col-md-3 text-center">
+                <div class="step-circle zus-accent mb-3">3</div>
+                <h5>Dodaj Okresy Pracy</h5>
+                <p class="small">Przeciągnij myszką na timeline aby zaznaczyć okresy zatrudnienia</p>
+            </div>
+
+            <div class="col-md-3 text-center">
+                <div class="step-circle zus-dark mb-3">4</div>
+                <h5>Zobacz Wyniki</h5>
+                <p class="small">Obserwuj prognozę emerytury aktualizowaną w czasie rzeczywistym</p>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="{% url 'simulator:dashboard' %}" class="btn btn-zus-primary btn-lg">
+                <i class="bi bi-arrow-right me-2"></i>
+                Przejdź do Dashboardu
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Types of contracts -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center mb-5">
+                <h2 class="display-5 fw-bold mb-3">Obsługiwane Typy Umów</h2>
+                <p class="lead text-muted">
+                    Symulator uwzględnia wszystkie popularne formy zatrudnienia w Polsce
+                </p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="d-flex align-items-center p-3 bg-white rounded shadow-sm">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="legend-color employment"></div>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Umowa o pracę</h6>
+                        <small class="text-muted">Składka: 19,52%</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="d-flex align-items-center p-3 bg-white rounded shadow-sm">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="legend-color mandate"></div>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Umowa zlecenie</h6>
+                        <small class="text-muted">Składka: 19,52%</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="d-flex align-items-center p-3 bg-white rounded shadow-sm">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="legend-color task"></div>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Umowa o dzieło</h6>
+                        <small class="text-muted">Składka: 0%</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="d-flex align-items-center p-3 bg-white rounded shadow-sm">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="legend-color business"></div>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Działalność gospodarcza</h6>
+                        <small class="text-muted">Składka: 19,52%</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="d-flex align-items-center p-3 bg-white rounded shadow-sm">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="legend-color b2b"></div>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Umowa B2B</h6>
+                        <small class="text-muted">Składka: 0%</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="d-flex align-items-center p-3 bg-light rounded">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-plus-circle text-primary"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Kombinacje umów</h6>
+                        <small class="text-muted">Wszystkie możliwe kombinacje</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Legal info -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="alert alert-info border-0">
+                    <div class="row align-items-center">
+                        <div class="col-md-1 text-center">
+                            <i class="bi bi-info-circle display-6 text-primary"></i>
+                        </div>
+                        <div class="col-md-11">
+                            <h5 class="alert-heading">Ważne informacje prawne</h5>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="mb-0">
+                                        <li>Kalkulacje zgodne z przepisami ZUS 2025</li>
+                                        <li>Uwzględniono aktualne stawki składek</li>
+                                        <li>Zastosowano tabele trwania życia GUS</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="mb-0">
+                                        <li>Wyniki mają charakter szacunkowy</li>
+                                        <li>Nie stanowią podstawy do roszczeń</li>
+                                        <li>Rzeczywiste emerytury mogą się różnić</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-3">Gotowy na start?</h2>
+                <p class="lead mb-4">
+                    Poznaj swoją przyszłą emeryturę już dziś. Symulacja zajmuje tylko kilka minut.
+                </p>
+                <a href="{% url 'simulator:dashboard' %}" class="btn btn-zus-primary btn-lg px-5">
+                    <i class="bi bi-rocket-takeoff me-2"></i>
+                    Rozpocznij Symulację Teraz
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

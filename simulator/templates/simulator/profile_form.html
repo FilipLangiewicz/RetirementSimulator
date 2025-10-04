@@ -1,0 +1,154 @@
+{% extends 'simulator/base.html' %}
+
+{% block title %}{{ title }} - Symulator Emerytalny{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2 class="mb-0">
+                    <i class="bi bi-person-plus me-2"></i>
+                    {{ title }}
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.age.id_for_label }}" class="form-label">{{ form.age.label }}</label>
+                                {{ form.age }}
+                                {% if form.age.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.age.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Podaj swój aktualny wiek w latach</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.gender.id_for_label }}" class="form-label">{{ form.gender.label }}</label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.gender.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Wpływa na wiek emerytalny</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.salary_gross.id_for_label }}" class="form-label">{{ form.salary_gross.label }}</label>
+                        <div class="input-group">
+                            {{ form.salary_gross }}
+                            <span class="input-group-text">zł</span>
+                        </div>
+                        {% if form.salary_gross.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.salary_gross.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Twoje obecne wynagrodzenie brutto miesięczne</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.work_start_year.id_for_label }}" class="form-label">{{ form.work_start_year.label }}</label>
+                                {{ form.work_start_year }}
+                                {% if form.work_start_year.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.work_start_year.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Rok rozpoczęcia pierwszej pracy</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.planned_retirement_year.id_for_label }}" class="form-label">{{ form.planned_retirement_year.label }}</label>
+                                {{ form.planned_retirement_year }}
+                                {% if form.planned_retirement_year.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.planned_retirement_year.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Kiedy planujesz przejść na emeryturę</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors.0 }}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'simulator:home' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Powrót
+                        </a>
+                        <button type="submit" class="btn btn-zus-primary">
+                            <i class="bi bi-check-circle me-1"></i>
+                            {% if profile %}Zapisz zmiany{% else %}Utwórz profil{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Info card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informacje o danych
+                </h6>
+                <ul class="small mb-0">
+                    <li>Wszystkie dane są zapisywane lokalnie i nie są udostępniane</li>
+                    <li>Wiek emerytalny: <strong>60 lat dla kobiet, 65 lat dla mężczyzn</strong></li>
+                    <li>Planowany rok emerytury zostanie automatycznie obliczony</li>
+                    <li>Dane można w każdej chwili edytować w dashboard</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-update retirement year
+    function updateRetirementYear() {
+        const age = parseInt(document.getElementById('id_age').value);
+        const gender = document.getElementById('id_gender').value;
+        const retirementInput = document.getElementById('id_planned_retirement_year');
+
+        if (age && gender) {
+            const retirementAge = gender === 'K' ? 60 : 65;
+            const currentYear = new Date().getFullYear();
+            const birthYear = currentYear - age;
+            const plannedYear = birthYear + retirementAge;
+
+            retirementInput.value = plannedYear;
+        }
+    }
+
+    document.getElementById('id_age').addEventListener('change', updateRetirementYear);
+    document.getElementById('id_gender').addEventListener('change', updateRetirementYear);
+
+    // Trigger on page load if values exist
+    if (document.getElementById('id_age').value && document.getElementById('id_gender').value) {
+        updateRetirementYear();
+    }
+});
+</script>
+{% endblock %}
