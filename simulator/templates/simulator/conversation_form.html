@@ -26,7 +26,7 @@
             <!-- KROK 1 -->
             <section class="step active fade-in" data-step="1">
               <h2 class="h3 fw-bold mb-3 text-center">Zanim zaczniemy, jak się nazywasz? <span class="ms-1">:)</span></h2>
-              <input type="text" class="form-control form-control-lg" name="full_name" placeholder="imię i nazwisko" required>
+              <input type="text" class="form-control form-control-lg" name="full_name" placeholder="imię" required>
               <div class="invalid-feedback d-block small mt-2 d-none" data-error="full_name">Wpisz proszę swoje imię.</div>
               <div class="mt-4 d-flex justify-content-end">
                 <button type="button" class="btn btn-primary btn-lg next-btn">Dalej</button>
@@ -35,11 +35,9 @@
 
             <!-- KROK 2 -->
             <section class="step" data-step="2">
-              <h2 class="h3 fw-bold mb-3 text-center">Podaj datę urodzenia</h2>
+              <h2 class="h3 fw-bold mb-3 text-center">Podaj rok urodzenia</h2>
 
               <div class="d-flex gap-3 justify-content-center">
-                <input class="dob-box" type="text" inputmode="numeric" name="dob_day" maxlength="2" placeholder="DD" required>
-                <input class="dob-box" type="text" inputmode="numeric" name="dob_month" maxlength="2" placeholder="MM" required>
                 <input class="dob-box" type="text" inputmode="numeric" name="dob_year" maxlength="4" placeholder="RRRR" required>
               </div>
               <div class="invalid-feedback d-block small mt-2 text-center d-none" data-error="dob">Wpisz poprawną datę.</div>
@@ -72,8 +70,8 @@
             <section class="step" data-step="4">
               <h2 class="h3 fw-bold mb-3 text-center">A teraz przejdźmy do konkretów. Jaką chciałbyś mieć emeryturę?</h2>
               <div class="input-group input-group-lg">
-                <input type="number" min="0" step="100" class="form-control" name="target_pension" placeholder="np. 6000">
-                <span class="input-group-text">PLN / mc</span>
+                <input type="number" min="0" step="100" class="form-control" name="target_pension" placeholder="6000">
+                <span class="input-group-text">PLN / msc</span>
               </div>
               <div class="invalid-feedback d-block small mt-2 d-none" data-error="target_pension">Podaj kwotę (liczbę większą od 0).</div>
 

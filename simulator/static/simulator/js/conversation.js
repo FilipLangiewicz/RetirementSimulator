@@ -1,36 +1,28 @@
 (function () {
   const form = document.getElementById('conversationForm');
   if (!form) return;
-
   const steps = Array.from(form.querySelectorAll('.step'));
   const progressBar = document.getElementById('progressBar');
   let current = 0;
-
   const showStep = (idx, direction = 1) => {
     if (idx < 0 || idx >= steps.length || idx === current) return;
-
     const out = steps[current];
     const inside = steps[idx];
-
     // animacja wygaszania
     out.classList.remove('fade-in');
     out.classList.add('fade-out');
-
     out.addEventListener('animationend', function handler() {
       out.classList.remove('active', 'fade-out');
       inside.classList.add('active', 'fade-in');
       out.removeEventListener('animationend', handler);
     });
-
     current = idx;
     updateProgress();
   };
-
   const updateProgress = () => {
     const pct = Math.round(((current) / (steps.length - 1)) * 100);
     progressBar.style.width = pct + '%';
   };
-
   // obsługa przycisków
   form.addEventListener('click', (e) => {
     if (e.target.closest('.next-btn')) {
@@ -40,7 +32,6 @@
       showStep(current - 1, -1);
     }
   });
-
   // walidacje per krok
   function validateStep(i) {
     hideErrors();
@@ -51,11 +42,8 @@
         return true;
       }
       case 1: {
-        const d = form.dob_day.value.padStart(2,'0');
-        const m = form.dob_month.value.padStart(2,'0');
         const y = form.dob_year.value;
-        const dateStr = `${y}-${m}-${d}`;
-        const valid = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(new Date(dateStr).getTime());
+        const valid = /^\d{4}$/.test(y) && Number(y) >= 1900 && Number(y) <= new Date().getFullYear();
         if (!valid) return showErr('dob');
         return true;
       }
@@ -68,7 +56,6 @@
         return true;
     }
   }
-
   function hideErrors() {
     form.querySelectorAll('.invalid-feedback').forEach(el => el.classList.add('d-none'));
   }
@@ -77,7 +64,6 @@
     if (el) el.classList.remove('d-none');
     return false;
   }
-
   // finalna walidacja przy submit
   form.addEventListener('submit', (e) => {
     hideErrors();
@@ -85,7 +71,6 @@
     [0,1,2].forEach(i => { if (ok) ok = validateStep(i); });
     const val = Number(form.target_pension.value);
     if (!(val > 0)) { showErr('target_pension'); ok = false; }
-
     if (!ok) {
       e.preventDefault();
       // skocz do pierwszego błędnego kroku
@@ -96,6 +81,5 @@
       if (firstErrStep !== undefined) showStep(firstErrStep);
     }
   });
-
   updateProgress();
 })();
