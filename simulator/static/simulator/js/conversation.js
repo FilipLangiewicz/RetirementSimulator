@@ -83,3 +83,18 @@
   });
   updateProgress();
 })();
+
+// Dynamiczne dopasowanie pytania emerytalnego do płci
+const genderInputs = form.querySelectorAll('input[name="gender"]');
+const pensionQuestion = document.getElementById('pensionQuestion');
+
+genderInputs.forEach(input => {
+  input.addEventListener('change', () => {
+    if (pensionQuestion) {
+      pensionQuestion.textContent =
+        input.value === 'Kobieta'
+          ? 'A teraz przejdźmy do konkretów. Jaką chciałabyś mieć emeryturę?'
+          : 'A teraz przejdźmy do konkretów. Jaką chciałbyś mieć emeryturę?';
+    }
+  });
+});
