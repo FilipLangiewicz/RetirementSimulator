@@ -1,0 +1,372 @@
+{% extends 'simulator/base.html' %}
+{% load static %}
+
+{% block title %}Doradca – Symulator Emerytalny{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<style>
+    .btn-primary{
+  --bs-btn-bg: #198754;               /* podstawowy zielony (jak btn-success) */
+  --bs-btn-border-color: #198754;
+  --bs-btn-hover-bg: #157347;
+  --bs-btn-hover-border-color: #146c43;
+  --bs-btn-active-bg: #146c43;
+  --bs-btn-active-border-color: #13653f;
+  --bs-btn-disabled-bg: #198754;
+  --bs-btn-disabled-border-color: #198754;
+  color: #fff;
+}
+  .chat-card{max-width:1050px;margin:0 auto}
+  .chat-window{height:520px;overflow:auto;border:1px solid #dee2e6;border-radius:8px;padding:16px;background:#f8f9fa}
+  .msg{display:flex;margin-bottom:10px}
+  .msg .bubble{max-width:75%;padding:10px 12px;border-radius:12px;font-size:0.95rem;line-height:1.5}
+  .msg.user{justify-content:flex-end}
+  .msg.user .bubble{background: #00993f;color:#fff;border-top-right-radius:4px}
+  .msg.bot .bubble{background:#fff;border:1px solid #e5e7eb;border-top-left-radius:4px}
+  .chips{gap:8px}
+  .chip{border:1px solid #ced4da;border-radius:999px;padding:6px 12px;background:#fff;cursor:pointer}
+  .muted-note{font-size:.9rem;color:#6c757d}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-robot me-2"></i> Doradca emerytalny</h2>
+    <a href="{% url 'simulator:dashboard' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Wróć do dashboardu
+    </a>
+  </div>
+
+  <!-- 1 RZĄD: Wiek | Wiek emerytury | Cel emerytury -->
+  <div class="row g-3 mb-3 align-items-stretch">
+    <div class="col-12 col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Wiek</div>
+          <div class="h4 mb-1">
+            {% if profile and profile.age %}{{ profile.age }}{% else %}—{% endif %}
+          </div>
+          <div class="muted-note">
+            To tylko punkt startu. Spokojnie, każdy może poprawić swoją sytuację małymi, regularnymi krokami.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Wiek emerytury</div>
+          <div class="h4 mb-1">
+            {% if pension_data and pension_data.retirement_age %}{{ pension_data.retirement_age }}{% else %}—{% endif %}
+          </div>
+          <div class="muted-note">
+            Każdy dodatkowy rok pracy zwykle zwiększa świadczenie. Nie trzeba rewolucji – liczą się mądre, proste decyzje.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Cel emerytury</div>
+          <div class="h5 mb-1">
+            {% if profile and profile.target_pension %}
+              {{ profile.target_pension|floatformat:0 }} zł
+            {% else %}
+              —
+            {% endif %}
+          </div>
+          <div class="muted-note">
+            Warto mieć cel zapisany w kwocie miesięcznej. Do takiego celu dochodzi się najlepiej prostym planem i automatyzacją.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /1 RZĄD -->
+
+  <!-- Chat -->
+  <div class="card chat-card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <div><i class="bi bi-chat-dots me-2"></i> Rozmowa</div>
+      <small class="text-muted">Spokojnie. To są ogólne wskazówki, które mają Ci pomóc poukładać sprawy krok po kroku.</small>
+    </div>
+
+    <div id="chatWindow" class="chat-window">
+      <div class="msg bot"><div class="bubble">
+        Cześć! Dobrze, że tu jesteś. Porozmawiajmy po prostu i po ludzku o Twojej przyszłości finansowej. Zależy mi, żebyś czuł się bezpiecznie – bez skomplikowanych słów i bez presji. 
+        Zaczniemy od podstaw: emerytura to zamiana kawałka dzisiejszych dochodów na przyszły spokój. Najlepiej działa regularność, nawet jeśli kwoty są niewielkie, bo ważne jest to, że działasz co miesiąc.
+        Warto też znać pojęcie stopy zastępczości, czyli relacji emerytury do ostatniej pensji; nie chodzi o perfekcję, tylko o to, żeby na emeryturze dało się normalnie żyć.
+        Napisz, o czym chcesz porozmawiać. Możesz skorzystać z podpowiedzi poniżej albo zadać własne pytanie pełnym zdaniem.
+      </div></div>
+    </div>
+
+    <div class="card-body">
+      <!-- Stałe opcje: ZAWSZE widoczne -->
+      <div class="d-flex mb-2 chips flex-wrap" id="chips">
+        <span class="chip" data-intent="raisePension">Chcę wyższą emeryturę – od czego zacząć?</span>
+        <span class="chip" data-intent="smallSteps">Jak odkładać małymi krokami co miesiąc?</span>
+        <span class="chip" data-intent="workLonger">Czy warto przedłużyć pracę o kilka lat?</span>
+        <span class="chip" data-intent="replacementRate">Co to jest stopa zastępczości i jak ją podnieść?</span>
+        <span class="chip" data-intent="cushion">Jak dzielić pieniądze: poduszka i odkładanie długoterminowe?</span>
+        <span class="chip" data-intent="pillars">IKZE, IKE, PPK – czym to się różni w prostych słowach?</span>
+        <span class="chip" data-intent="breaks">Jak nie pogubić się przy przerwach w pracy?</span>
+        <span class="chip" data-intent="automation">Jak automatyzować oszczędzanie po wypłacie?</span>
+        <span class="chip" data-intent="payriseVsLonger">Czy lepiej podnosić pensję czy dłużej pracować?</span>
+        <span class="chip" data-intent="inflation">Jak przygotować się na inflację po ludzku?</span>
+      </div>
+
+      <!-- Pasek dynamicznych podpowiedzi (lokalny, opcjonalny) -->
+      <div class="d-flex mb-3 chips flex-wrap" id="suggestionsBar" style="display:none;"></div>
+
+      <div class="input-group">
+        <input id="chatInput" type="text" class="form-control" placeholder="Napisz wiadomość… np. 'Jak odkładać małymi krokami co miesiąc?'">
+        <button id="sendBtn" class="btn btn-primary"><i class="bi bi-send"></i></button>
+      </div>
+      <p class="mt-2 muted-note">
+        Odpowiadam prostym językiem i pełnymi zdaniami. Jeśli coś będzie niejasne, powiedz normalnie, co chcesz zrozumieć lepiej.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// --- Dane z templatu (z dashboardu) do personalizacji odpowiedzi:
+const ctx = {
+  age: {{ profile.age|default:"null" }},
+  retirement_age: {{ pension_data.retirement_age|default:"null" }},
+  total_work_years: {{ pension_data.total_work_years|default:"0" }},
+  total_contributions: {{ pension_data.total_contributions|default:"0" }},
+  target_pension: {% if profile and profile.target_pension %}{{ profile.target_pension|floatformat:0 }}{% else %}null{% endif %}
+};
+
+function fmtPln(x){
+  if(x === null || x === undefined) return "—";
+  const n = Number(x);
+  if(Number.isNaN(n)) return "—";
+  return n.toLocaleString("pl-PL", {maximumFractionDigits:0}) + " zł";
+}
+
+const win = document.getElementById("chatWindow");
+const input = document.getElementById("chatInput");
+const sendBtn = document.getElementById("sendBtn");
+const chips = document.getElementById("chips");
+const suggestionsBar = document.getElementById("suggestionsBar");
+
+// --- UI helpers
+function addMsg(text, who="bot"){
+  const row = document.createElement("div");
+  row.className = "msg " + who;
+  const b = document.createElement("div");
+  b.className = "bubble";
+  b.innerText = text;
+  row.appendChild(b);
+  win.appendChild(row);
+  win.scrollTop = win.scrollHeight;
+}
+
+function renderSuggestions(suggestions){
+  if (!suggestions || !suggestions.length){
+    suggestionsBar.style.display = "none";
+    suggestionsBar.innerHTML = "";
+    return;
+  }
+  suggestionsBar.innerHTML = "";
+  suggestions.forEach(s=>{
+    const c = document.createElement("span");
+    c.className = "chip";
+    c.innerText = s;
+    c.onclick = ()=> ask(s);
+    suggestionsBar.appendChild(c);
+  });
+  suggestionsBar.style.display = "flex";
+}
+
+// --- Rotacja wariantów odpowiedzi (żeby nie powtarzało się słowo w słowo)
+const variantIndex = {};
+function nextVariant(key, variants){
+  if(!variantIndex[key]) variantIndex[key] = 0;
+  const idx = variantIndex[key] % variants.length;
+  variantIndex[key] += 1;
+  return variants[idx];
+}
+
+// --- Odpowiedzi pełnymi zdaniami (bez list), ciepłe i proste – z wieloma wariantami:
+const Replies = {
+  raisePension(){
+    const v = [
+      () => {
+        const a = ctx.age ? `Patrzę na Twój wiek ${ctx.age} lat i widzę, że możesz spokojnie wzmocnić przyszłą emeryturę bez żadnych rewolucji.` :
+                            `Na Twojej ścieżce da się wzmocnić przyszłą emeryturę bez żadnych rewolucji.`;
+        const b = `Najlepiej działa regularne dopłacanie składek i pilnowanie ciągłości, bo to właśnie systematyczność buduje kapitał miesiąc po miesiącu.`;
+        const c = ctx.retirement_age
+          ? `Jeśli planujesz przejść na emeryturę w okolicach ${ctx.retirement_age} roku życia, delikatne przesunięcie tej decyzji o rok lub dwa potrafi wyraźnie podbić świadczenie.`
+          : `Delikatne przesunięcie decyzji o rok lub dwa potrafi wyraźnie podbić świadczenie.`;
+        const d = `Równolegle warto spokojnie odkładać poza ZUS, na przykład w IKZE, IKE lub PPK, bo nawet mniejsze, ale stałe wpłaty z czasem robią świetną robotę.`;
+        return `${a} ${b} ${c} ${d}`;
+      },
+      () => {
+        const a = `Na start wybierz niewielką, komfortową kwotę i ustaw stały przelew tuż po wypłacie, żeby odkładanie działo się w tle i nie wymagało silnej woli co miesiąc.`;
+        const b = `Dopilnuj też, aby w dłuższym okresie przeważały lata ze składkami, ponieważ to one najbardziej podnoszą przyszłą wypłatę.`;
+        const c = `Jeżeli masz możliwość, dołóż spokojne oszczędzanie w rozwiązaniach takich jak IKZE, IKE albo PPK, które dobudują Ci dodatkową poduszkę bezpieczeństwa.`;
+        return `${a} ${b} ${c}`;
+      },
+      () => {
+        const a = `Podchodź do tematu bez presji: ważniejsze od wysokości jednorazowej wpłaty jest to, żeby coś wpływało co miesiąc.`;
+        const b = `Dłuższy staż ze składkami i rozsądny moment zakończenia pracy wzmacniają świadczenie, a prywatne oszczędzanie daje Ci drugą, spokojną „nogę” niezależności.`;
+        return `${a} ${b}`;
+      }
+    ];
+    return nextVariant("raisePension", v).call(null);
+  },
+
+  smallSteps(){
+    const a = `Najłatwiej zacząć od stałego przelewu tuż po wypłacie, nawet jeśli kwota jest niewielka, ponieważ regularność buduje nawyk i kapitał.`;
+    const b = `W praktyce warto mieć poduszkę bezpieczeństwa na kilka miesięcy wydatków oraz osobne odkładanie długoterminowe na emeryturę, żeby mieć i spokój na dziś, i spokój na jutro.`;
+    const c = `W długim terminie działa połączenie rozwiązań bezpiecznych i rynkowych, bo część środków pracuje, a część daje Ci komfort.`;
+    return `${a} ${b} ${c}`;
+  },
+
+  workLonger(){
+    const a = `Wydłużenie pracy o kilka lat zwykle realnie zwiększa świadczenie, ponieważ dopłacasz składki dłużej, a wypłata trwa krócej.`;
+    const b = ctx.retirement_age
+      ? `Jeżeli myślisz o zakończeniu pracy w okolicach ${ctx.retirement_age} roku życia, przesunięcie tej decyzji o rok lub dwa może zrobić zauważalną różnicę.`
+      : `Przesunięcie tej decyzji o rok lub dwa może zrobić zauważalną różnicę.`;
+    return `${a} ${b}`;
+  },
+
+  // ⬇️ Nowe, wyraźnie inne warianty dla stopy zastępczości
+  replacementRate(){
+    const v = [
+      () => {
+        const a = `Stopa zastępczości to po prostu odpowiedź na pytanie, jaką część Twojej ostatniej pensji zastąpi emerytura, więc pomaga oszacować, czy po zakończeniu pracy utrzymasz podobny standard życia.`;
+        const b = `Żeby ją podnieść, warto dbać o możliwie długi okres ze składkami, rozważyć nieco późniejsze zakończenie pracy oraz spokojnie odkładać poza ZUS, dzięki czemu dokładamy drugie źródło pieniędzy.`;
+        return `${a} ${b}`;
+      },
+      () => {
+        const a = `Myśl o stopie zastępczości jak o prostej relacji: im wyższa jest Twoja emerytura względem ostatniej pensji, tym mniejszy finansowy „skok” po zakończeniu pracy.`;
+        const b = `W praktyce pomaga ciągłość składek bez długich przerw, rozsądne przesunięcie daty emerytury oraz stałe, nawet niewielkie wpłaty do IKE, IKZE czy PPK, które budują dodatkowy zapas.`;
+        return `${a} ${b}`;
+      },
+      () => {
+        const a = `Chodzi o to, aby na emeryturze nie odczuwać gwałtownego spadku dochodów, dlatego liczy się staż ze składkami, moment przejścia oraz własne oszczędności, które uzupełniają wypłatę z systemu.`;
+        const b = `Jeżeli te trzy elementy połączysz spokojnym planem, Twoja stopa zastępczości naturalnie rośnie i łatwiej jest utrzymać codzienny rytm życia.`;
+        return `${a} ${b}`;
+      }
+    ];
+    return nextVariant("replacementRate", v).call(null);
+  },
+
+  cushion(){
+    return `Zdrowe podejście polega na tym, aby mieć poduszkę bezpieczeństwa na kilka miesięcy wydatków i równolegle odkładać długoterminowo na emeryturę, tak by pieniądze mogły spokojnie pracować w tle.`;
+  },
+
+  pillars(){
+    return `IKZE pozwala obniżyć podatek już dziś, IKE ułatwia długoterminowe odkładanie bez podatku od zysków przy spełnieniu warunków, a PPK dorzuca wpłaty od pracodawcy i państwa, więc te rozwiązania dobrze się uzupełniają i warto je łączyć.`;
+  },
+
+  breaks(){
+    return `Jeśli w karierze zdarzają się przerwy, najlepiej planować je tak, aby w skali lat mieć jak najwięcej okresów ze składkami, ponieważ to właśnie ciągłość najmocniej buduje przyszłą emeryturę.`;
+  },
+
+  automation(){
+    return `Automatyzacja naprawdę pomaga, bo stały przelew po wypłacie sprawia, że oszczędzanie dzieje się samo, a Ty nie musisz o tym pamiętać, co po latach daje miły, namacalny efekt.`;
+  },
+
+  payriseVsLonger(){
+    return `Podwyżka zwiększa podstawę składek i działa szybciej, a dłuższa praca dokłada czas i potęguje efekt kumulacji; najczęściej najlepiej działa spokojne połączenie obu kierunków.`;
+  },
+
+  inflation(){
+    return `Inflacja to normalna sprawa w gospodarce, dlatego rozsądnie jest część środków trzymać bezpiecznie dla spokoju, a część inwestować długoterminowo, aby pieniądze miały szansę nadążać za wzrostem cen.`;
+  },
+
+  personalizedIntro(){
+    const parts = [];
+    if (ctx.age) parts.push(`Masz teraz ${ctx.age} lat, więc jest jeszcze czas na spokojne, mądre decyzje.`);
+    if (ctx.total_work_years && Number(ctx.total_work_years) > 0) parts.push(`Dotychczasowy staż pracy to około ${ctx.total_work_years} lat, co jest dobrą bazą do dalszego budowania kapitału.`);
+    if (ctx.total_contributions && Number(ctx.total_contributions) > 0) parts.push(`Suma składek, które zebrałeś, to mniej więcej ${fmtPln(ctx.total_contributions)}, więc ten wysiłek już pracuje na Twoją przyszłość.`);
+    if (ctx.target_pension) parts.push(`Cel, do którego dążysz co miesiąc, to około ${fmtPln(ctx.target_pension)}, więc warto do niego iść małymi, regularnymi krokami.`);
+    return parts.length ? parts.join(" ") : `Spokojnie, zaczniemy od prostych kroków i dopasujemy je do Twojej sytuacji.`;
+  },
+
+  fallback(){
+    const a = `Rozumiem, że chcesz poukładać swoją przyszłość finansową w prosty sposób i bez nerwów.`;
+    const b = `Najbardziej pomaga regularność nawet małych wpłat i dbanie o ciągłość składek, a jeśli możesz, dorzuć do tego spokojne odkładanie poza ZUS.`;
+    const c = `Jeśli chcesz, napisz jednym zdaniem, co jest dla Ciebie teraz najważniejsze, a odpowiem jeszcze konkretniej.`;
+    return `${a} ${b} ${c}`;
+  }
+};
+
+// --- Klik w „chipa” → zawsze właściwa, unikalna odpowiedź
+function askIntent(intentKey){
+  if (!Replies[intentKey]) return;
+  const reply = Replies[intentKey]();
+  addMsg(reply, "bot");
+  renderSuggestions([
+    "Jak odkładać małymi krokami co miesiąc?",
+    "Czy warto przedłużyć pracę o kilka lat?",
+    "Co to jest stopa zastępczości i jak ją podnieść?"
+  ]);
+}
+
+// --- Router dla wpisywanych ręcznie pytań
+function route(text){
+  const t = (text || "").toLowerCase()
+    .replaceAll("ł","l").replaceAll("ą","a").replaceAll("ę","e").replaceAll("ś","s")
+    .replaceAll("ć","c").replaceAll("ń","n").replaceAll("ó","o").replaceAll("ż","z").replaceAll("ź","z");
+
+  const contains = (arr)=> arr.some(k => t.includes(k));
+
+  // Najpierw „stopa zastępczości”, potem ogólne „emerytura”
+  if (contains(["stopa zastepczosci","zastepczosci","stopa"])) return Replies.replacementRate();
+  if (contains(["wyzsza","wiecej","zwieksz","podnies","emerytur"])) return Replies.raisePension();
+  if (contains(["oszczedz","odkladac","maly","malymi","krokami"])) return Replies.smallSteps();
+  if (contains(["dluzej","przedluzyc","dluzsza praca","dluzej pracowac"])) return Replies.workLonger();
+  if (contains(["poduszka","dlugotermin","dlugoterminowe"])) return Replies.cushion();
+  if (contains(["ikze","ike","ppk"])) return Replies.pillars();
+  if (contains(["przerwy","dziury","skladk"])) return Replies.breaks();
+  if (contains(["automatyz","staly przelew"])) return Replies.automation();
+  if (contains(["podwyzk","pensj","dluzej pracowac"])) return Replies.payriseVsLonger();
+  if (contains(["inflac"])) return Replies.inflation();
+
+  return `${Replies.personalizedIntro()} ${Replies.fallback()}`;
+}
+
+// --- Obsługa UI
+function ask(msg){
+  addMsg(msg, "user");
+  input.value = "";
+  const reply = route(msg);
+  addMsg(reply, "bot");
+  renderSuggestions([
+    "Jak odkładać małymi krokami co miesiąc?",
+    "Czy warto przedłużyć pracę o kilka lat?",
+    "Co to jest stopa zastępczości i jak ją podnieść?"
+  ]);
+}
+
+sendBtn.onclick = () => { if (input.value.trim()) ask(input.value.trim()); };
+input.addEventListener("keydown", (e) => { if (e.key === "Enter" && input.value.trim()) ask(input.value.trim()); });
+
+// Kliki w chipy → bezpośrednio po intencie (pewne mapowanie)
+Array.from(chips.querySelectorAll(".chip")).forEach(c => {
+  const intent = c.getAttribute("data-intent");
+  if(intent){
+    c.onclick = () => {
+      addMsg(c.innerText, "user");
+      askIntent(intent);
+    };
+  } else {
+    c.onclick = () => { addMsg(c.innerText, "user"); ask(c.innerText); };
+  }
+});
+</script>
+{% endblock %}
