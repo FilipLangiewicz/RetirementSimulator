@@ -80,17 +80,45 @@
         border-color: rgb(240, 94, 94);
     }
 
-    .timeline-vertical-line.planned-retirement-line {
-        border-color: rgb(63, 132, 210);
-    }
-
     /* POPRAWIONE: Etykiety pod timelineem - NA ZEWNĄTRZ kontenera */
     .timeline-line-labels {
-        {#position: relative; /* Zmieniono z absolute na relative */#}
         width: 100%;
         height: 30px;
         margin-top: 5px; /* Dodano odstęp od timelineu */
         padding: 0 10px; /* Wyrównanie z paddingiem timeline-table */
+    }
+
+    .salary-slider {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #e9ecef;
+        outline: none;
+        -webkit-appearance: none;
+    }
+
+    .salary-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgb(63, 132, 210);
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .salary-display {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: rgb(0, 65, 110);
+        text-align: center;
+        margin: 10px 0;
+    }
+
+    .form-check {
+    min-height: 0rem;
+    margin-bottom: 0rem;
     }
 
     .timeline-line-label {
@@ -238,6 +266,32 @@
         color: #dc3545;
     }
 
+    .pension-amount {
+        font-size: 3rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+        .pension-amount {
+            font-size: 2rem;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+    }
+
     @media (max-width: 768px) {
         .timeline-table {
             grid-template-columns: repeat(45, 1fr);
@@ -255,52 +309,8 @@
 </style>
 {% endblock %}
 
-{% block content %}
-<!-- Podsumowanie emerytury na górze -->
-<div class="pension-summary">
-    <div class="row align-items-center">
-        <div class="col-md-8">
-            <h2 class="mb-3">
-                <i class="bi bi-calculator me-2"></i>
-                Twoja prognozowana emerytura
-            </h2>
-            <div class="pension-amount" id="pension-amount">
-                {{ formatted_pension }}
-            </div>
-            <p class="mb-0 opacity-75">miesięcznie brutto</p>
-        </div>
-        <div class="col-md-4">
-            <div class="text-end">
-                <button class="btn btn-outline-light btn-lg" data-bs-toggle="modal" data-bs-target="#profileModal">
-                    <i class="bi bi-person-gear me-2"></i>
-                    Edytuj dane
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Statystyki -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-value" id="work-years">{{ pension_data.total_work_years|default:0 }}</div>
-        <div class="stat-label">Lat pracy</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value" id="retirement-age">{{ pension_data.retirement_age|default:0 }}</div>
-        <div class="stat-label">Wiek emerytury</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value" id="total-contributions">{{ pension_data.total_contributions|floatformat:0|default:0 }}</div>
-        <div class="stat-label">Suma składek (zł)</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value" id="current-age">{{ profile.age }}</div>
-        <div class="stat-label">Obecny wiek</div>
-    </div>
-</div>
-
 <!-- Timeline -->
+ {% block content %}
 <div class="card">
     <div class="card-header">
         <div class="d-flex justify-content-between align-items-center">
@@ -647,7 +657,250 @@
     </div>
 </div>
 
+<!-- Duży kafelik z emeryturą -->
+<div class="container mt-3" style="max-width: 900px;">
+    <div class="card mb-4 shadow-lg border-0">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h3 class="mb-3 text-dark">
+                        <i class="bi bi-calculator me-2 text-success"></i>
+                        Twoja prognozowana emerytura
+                    </h3>
+                    <div class="pension-amount text-success mb-2" id="pension-amount">
+                        {{ formatted_pension }}
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-outline-success btn-lg" data-bs-toggle="modal" data-bs-target="#profileModal">
+                        <i class="bi bi-person-gear me-2"></i>
+                        Edytuj dane
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mniejsze kafelki ze statystykami -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body text-center p-3">
+                <div class="stat-value text-success mb-2" id="work-years">
+                    {{ pension_data.total_work_years|default:0 }}
+                </div>
+                <div class="stat-label text-muted small">Lat pracy</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body text-center p-3">
+                <div class="stat-value text-success mb-2" id="retirement-age">
+                    {{ pension_data.retirement_age|default:0 }}
+                </div>
+                <div class="stat-label text-muted small">Wiek przejścia na emeryturę</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body text-center p-3">
+                <div class="stat-value text-success mb-2" id="total-contributions">
+                    {{ pension_data.total_contributions|floatformat:0|default:0 }} zł
+                </div>
+                <div class="stat-label text-muted small">Suma składek</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body text-center p-3">
+                <div class="stat-value text-success mb-2" id="current-age">
+                    {{ profile.age }}
+                </div>
+                <div class="stat-label text-muted small">Obecny wiek</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Piramida potrzeb emerytalnych -->
+{% if pension_data.monthly_pension > 0 %}
+<div class="container mt-5 mb-5" style="max-width: 1000px;">
+    <div class="card shadow-lg border-0">
+        <div class="card-body p-4">
+            <h3 class="mb-4 text-center text-dark">
+                <i class="bi bi-layers me-2 text-success"></i>
+                Poziom zabezpieczenia emerytalnego
+            </h3>
+            
+            <div class="row align-items-center">
+                <div class="col-md-5 text-center mb-4 mb-md-0">
+                    <img src="{% static 'simulator/img/piramida' %}{{ pyramid_level }}.png" 
+                         alt="Piramida potrzeb - poziom {{ pyramid_level }}" 
+                         class="img-fluid rounded shadow"
+                         style="max-height: 400px;">
+                </div>
+                
+                <div class="col-md-7">
+                    <div class="border-start border-5 {{ pyramid_border_class }} ps-4">
+                        <h5 class="{{ pyramid_text_class }} mb-3">{{ pyramid_title }}</h5>
+                        <p class="text-dark mb-3">{{ pyramid_description }}</p>
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <small class="text-muted">
+                                <strong>Przedział:</strong> {{ pyramid_range }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script type="application/json" id="timeline-data">{{ timeline_data_json|safe }}</script>
+<script>
+// Funkcja określająca poziom piramidy na podstawie kwoty emerytury
+function getPyramidLevel(pension) {
+    const levels = [
+        {
+            max: 1000,
+            level: 0,
+            title: 'Warstwa 0 – Brak zabezpieczenia',
+            description: 'Przy emeryturze w wysokości od 0 do 1000 zł miesięcznie nie będziesz w stanie zaspokoić nawet podstawowych potrzeb. Nie starczy Ci na jedzenie, leki, mieszkanie ani opłaty za rachunki. Taka kwota nie pozwoli na samodzielne funkcjonowanie i oznacza całkowitą zależność od pomocy bliskich lub wsparcia społecznego.',
+            range: '0 - 1 000 zł',
+            textClass: 'text-danger',
+            borderClass: 'border-danger'
+        },
+        {
+            max: 2000,
+            level: 1,
+            title: 'Warstwa 1 – Podstawowe potrzeby',
+            description: 'Przy emeryturze w wysokości od 1 000 do 2 000 zł miesięcznie będziesz w stanie pokryć jedynie najprostsze potrzeby, takie jak zakup chleba, mleka, warzyw, mięsa i podstawowych leków. Zabraknie Ci pieniędzy na czynsz, rachunki, transport czy ubrania.',
+            range: '1 000 - 2 000 zł',
+            textClass: 'text-warning',
+            borderClass: 'border-warning'
+        },
+        {
+            max: 3500,
+            level: 2,
+            title: 'Warstwa 2 – Mieszkanie i rachunki',
+            description: 'Emerytura w przedziale od 2 000 do 3 500 zł pozwoli Ci opłacić mieszkanie, rachunki za prąd, gaz i wodę, a także zapewnić podstawowe jedzenie oraz leki. Będziesz mógł pokryć koszty podstawowego transportu. Zabraknie Ci jednak pieniędzy na dodatkowe leczenie, zakup nowych ubrań czy podstawowe formy rozrywki.',
+            range: '2 000 - 3 500 zł',
+            textClass: 'text-info',
+            borderClass: 'border-info'
+        },
+        {
+            max: 6000,
+            level: 3,
+            title: 'Warstwa 3 – Zdrowie i codzienny komfort',
+            description: 'Przy emeryturze wynoszącej od 3 500 do 6 000 zł będziesz mógł pokryć wszystkie podstawowe koszty życia, w tym mieszkanie, rachunki, transport i lepszej jakości jedzenie. Będziesz miał możliwość zakupu ubrań i obuwia, opłacenia internetu i telefonu oraz pokrycia kosztów podstawowych badań i leków. Zabraknie Ci jednak środków na wakacje, hobby czy zakupy o charakterze luksusowym.',
+            range: '3 500 - 6 000 zł',
+            textClass: 'text-primary',
+            borderClass: 'border-primary'
+        },
+        {
+            max: 10000,
+            level: 4,
+            title: 'Warstwa 4 – Rozrywka i wypoczynek',
+            description: 'Emerytura w przedziale od 6 000 do 10 000 zł pozwoli Ci nie tylko pokryć wszystkie niezbędne wydatki, lecz także zapewni dodatkowy komfort. Będziesz mógł chodzić do kina, teatru czy restauracji, pozwolić sobie na krótkie wakacje w Polsce oraz rozwijać hobby. Nadal jednak zabraknie Ci środków na regularne wakacje zagraniczne, nowy samochód czy drogie prezenty.',
+            range: '6 000 - 10 000 zł',
+            textClass: 'text-success',
+            borderClass: 'border-success'
+        },
+        {
+            max: Infinity,
+            level: 5,
+            title: 'Warstwa 5 – Luksus',
+            description: 'Emerytura w wysokości powyżej 10 000 zł zapewni Ci pełny komfort życia. Będziesz mógł realizować wszystkie potrzeby, w tym podróże zagraniczne, zakup nowego samochodu, korzystanie z dóbr luksusowych, rozwijanie hobby i kupowanie prezentów dla bliskich. Na tym poziomie Twoja emerytura nie będzie w zasadzie ograniczać możliwości konsumpcji.',
+            range: 'powyżej 10 000 zł',
+            textClass: 'text-success',
+            borderClass: 'border-success'
+        }
+    ];
+    
+    for (let levelData of levels) {
+        if (pension <= levelData.max) {
+            return levelData;
+        }
+    }
+    return levels[levels.length - 1];
+}
+
+// Funkcja aktualizująca piramidę
+function updatePyramid() {
+    const pensionElement = document.getElementById('pension-amount');
+    if (!pensionElement) return;
+    
+    // Odczytaj tekst i wyciągnij liczbę (usuń spacje i "zł")
+    const pensionText = pensionElement.textContent.trim();
+    const pensionAmount = parseInt(pensionText.replace(/\s/g, '').replace('zł', '')) || 0;
+    
+    // Pobierz informacje o poziomie
+    const pyramidInfo = getPyramidLevel(pensionAmount);
+    
+    // Zaktualizuj elementy na stronie
+    const pyramidContainer = document.querySelector('.container.mt-5.mb-5');
+    if (pyramidContainer && pensionAmount > 0) {
+        pyramidContainer.style.display = 'block';
+        
+        // Zaktualizuj obrazek
+        const img = pyramidContainer.querySelector('img');
+        if (img) {
+            img.src = "{% static 'simulator/img/piramida' %}" + pyramidInfo.level + ".png";
+            img.alt = "Piramida potrzeb - poziom " + pyramidInfo.level;
+        }
+        
+        // Zaktualizuj tytuł
+        const title = pyramidContainer.querySelector('h5');
+        if (title) {
+            title.textContent = pyramidInfo.title;
+            title.className = pyramidInfo.textClass + ' mb-3';
+        }
+        
+        // Zaktualizuj opis
+        const description = pyramidContainer.querySelector('p.text-dark');
+        if (description) {
+            description.textContent = pyramidInfo.description;
+        }
+        
+        // Zaktualizuj zakres
+        const range = pyramidContainer.querySelector('small strong');
+        if (range && range.nextSibling) {
+            range.nextSibling.textContent = ' ' + pyramidInfo.range;
+        }
+        
+        // Zaktualizuj border
+        const border = pyramidContainer.querySelector('.border-start');
+        if (border) {
+            border.className = 'border-start border-5 ' + pyramidInfo.borderClass + ' ps-4';
+        }
+    } else if (pyramidContainer) {
+        pyramidContainer.style.display = 'none';
+    }
+}
+
+// Uruchom aktualizację po załadowaniu strony
+document.addEventListener('DOMContentLoaded', updatePyramid);
+
+// Obserwuj zmiany w elemencie pension-amount
+const pensionObserver = new MutationObserver(updatePyramid);
+const pensionElement = document.getElementById('pension-amount');
+if (pensionElement) {
+    pensionObserver.observe(pensionElement, { 
+        childList: true, 
+        characterData: true, 
+        subtree: true 
+    });
+}
+</script>
+
 {% endblock %}
 
 {% block extra_js %}

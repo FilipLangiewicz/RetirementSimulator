@@ -132,7 +132,6 @@ textarea:focus,
   border-color: var(--zus-green);
 }
 
-
 .btn-zus-primary:hover {
     background: rgb(230, 160, 60);
     border-color: rgb(230, 160, 60);
@@ -222,7 +221,10 @@ a.btn:nth-child(2) {
 }
 
 .feature-icon.zus-primary { background: var(--zus-green); }
-.feature-icon.zus-secondary { background: var(--zus-green); }
+.feature-icon.zus-secondary {
+  background: var(--zus-blue);
+}
+
 .feature-icon.zus-accent { background: var(--zus-orange); }
 
 /* Step circles */
@@ -240,7 +242,7 @@ a.btn:nth-child(2) {
 }
 
 .step-circle.zus-primary { background: var(--zus-green); }
-.step-circle.zus-secondary { background: var(--zus-green); }
+.step-circle.zus-secondary { background: var(--zus-blue); }
 .step-circle.zus-accent { background: var(--zus-orange); }
 .step-circle.zus-dark { background: var(--zus-green); }
 

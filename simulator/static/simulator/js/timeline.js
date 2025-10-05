@@ -31,7 +31,7 @@ class DynamicTimeline {
                 gender: 'M',
                 birthYear: 1995,
                 legalRetirementAge: 51,
-                plannedRetirementAge: 65,
+                plannedRetirementAge: this.appData.gender === 'K' ? 60 : 65,
                 activities: []
             };
         }
@@ -597,12 +597,6 @@ class DynamicTimeline {
                 className: 'legal-retirement-line',
                 labelClass: 'legal-retirement-label',
                 text: this.isAgeMode ? `Emerytura ${this.appData.legalRetirementAge}` : `Emerytura ${legalYear}`
-            },
-            {
-                age: this.appData.plannedRetirementAge,
-                className: 'planned-retirement-line',
-                labelClass: 'planned-retirement-label',
-                text: this.isAgeMode ? `Plan ${this.appData.plannedRetirementAge}` : `Plan ${plannedYear}`
             }
         ];
 
