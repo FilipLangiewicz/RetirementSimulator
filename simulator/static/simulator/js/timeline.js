@@ -1,3 +1,5 @@
+// Znajduje się w pliku: static/js/timeline.js (lub odpowiedni plik z klasą DynamicTimeline)
+
 class DynamicTimeline {
     constructor() {
         this.isSelecting = false;
@@ -6,30 +8,73 @@ class DynamicTimeline {
         this.isAgeMode = true;
         this.selectedActivity = null;
 
-        this.appData = {
-            currentAge: 30,
-            gender: 'M',
-            birthYear: 1995,
-            legalRetirementAge: 65,
-            plannedRetirementAge: 65,
-            activities: [] // {id,startAge,endAge,type,contractType?,salary?,row}
-        };
+        this.appData = this.loadDataFromDjango();
+
 
         this.init();
     }
 
     init() {
-        this.setupAppData();
         this.renderTimeline();
         this.bindEvents();
         this.updatePensionDisplay();
     }
 
-    setupAppData() {
-        const currentYear = new Date().getFullYear();
-        this.appData.birthYear = currentYear - this.appData.currentAge;
-        this.appData.legalRetirementAge = this.appData.gender === 'K' ? 60 : 65;
-        this.appData.plannedRetirementAge = this.appData.legalRetirementAge;
+    loadDataFromDjango() {
+        const dataElement = document.getElementById('timeline-data');
+
+        if (!dataElement) {
+            console.error('Nie znaleziono elementu #timeline-data');
+            // Fallback - domyślne dane
+            return {
+                currentAge: 30,
+                gender: 'M',
+                birthYear: 1995,
+                legalRetirementAge: 65,
+                plannedRetirementAge: 65,
+                activities: []
+            };
+        }
+
+        try {
+            const djangoData = JSON.parse(dataElement.textContent);
+
+            // Mapuj dane z Django na appData
+            return {
+                currentAge: djangoData.current_age || 30,
+                gender: djangoData.gender || 'M',
+                birthYear: djangoData.birth_year || 1995,
+                legalRetirementAge: djangoData.legal_retirement_age || 65,
+                plannedRetirementAge: djangoData.planned_retirement_age || 65,
+                activities: djangoData.activities || []
+            };
+        } catch (error) {
+            console.error('Błąd parsowania danych z Django:', error);
+            // Fallback
+            return {
+                currentAge: 30,
+                gender: 'M',
+                birthYear: 1995,
+                legalRetirementAge: 65,
+                plannedRetirementAge: 65,
+                activities: []
+            };
+        }
+    }
+
+    // USUŃ metodę setupAppData() - nie jest już potrzebna!
+    // setupAppData() {
+    //     const currentYear = new Date().getFullYear();
+    //     this.appData.birthYear = currentYear - this.appData.currentAge;
+    //     this.appData.legalRetirementAge = this.appData.gender === 'K' ? 60 : 65;
+    //     this.appData.plannedRetirementAge = this.appData.legalRetirementAge;
+    // }
+
+    init() {
+        // setupAppData() nie jest już potrzebne - dane pochodzą z Django
+        this.renderTimeline();
+        this.bindEvents();
+        this.updatePensionDisplay();
     }
 
     bindEvents() {
@@ -68,7 +113,7 @@ class DynamicTimeline {
         // Context menu actions
         const editBtn = document.getElementById('editActivity');
         const deleteBtn = document.getElementById('deleteActivity');
-        
+
         if (editBtn) {
             editBtn.addEventListener('click', () => {
                 this.hideContextMenu();
@@ -264,16 +309,9 @@ class DynamicTimeline {
         modal.hide();
     }
 
-    // --- KLUCZOWA LOGIKA ---
-    /**
-     * Główna metoda zapisu aktywności - automatyczne rozmieszczenie po wierszach,
-     * dodawanie pustego wiersza jeśli trzeba.
-     */
     saveActivity(type, contractType=null, salary=null) {
-        // Najpierw spróbuj znaleźć pierwszy dostępny wiersz NIEKOLIDUJĄCY z zakresem.
         let row = this.findAvailableRow(this.selectionStart, this.selectionEnd);
 
-        // Dodaj aktywność do określonego wiersza.
         this.appData.activities.push({
             id: Date.now() + Math.random(),
             startAge: this.selectionStart,
@@ -281,10 +319,7 @@ class DynamicTimeline {
             type, contractType, salary, row
         });
 
-        // Specjalne: sprawdź, czy po dodaniu aktywności w każdym roku z zakresu
-        // jest już "pełno" - czyli wszerz żaden wiersz nie jest pusty dla jakiegokolwiek roku.
         if (this.shouldAddExtraRow(this.selectionStart, this.selectionEnd)) {
-            // Istnieje rok, gdzie wszystkie wiersze są zajęte w tym roku!
             this.forceAddRow();
         }
 
@@ -294,47 +329,34 @@ class DynamicTimeline {
         this.showMessage(`Dodano aktywność: ${this.getActivityDisplayName(type)} (${this.selectionStart}-${this.selectionEnd} lat)`, 'success');
     }
 
-    /** Znajdź najmniejszy niekolidujący wiersz dla danego zakresu lub nowy */
     findAvailableRow(startAge, endAge) {
-        // Policz ile wierszy dynamicznie istnieje
         const allRows = this.appData.activities.map(a => a.row).filter(x => typeof x === "number");
         const maxRow = allRows.length ? Math.max(...allRows) : -1;
-        
-        // Sprawdź wszystkie od 0 do maxRow+1 (zapas)
+
         for (let testRow = 0; testRow <= maxRow + 2; testRow++) {
             const collision = this.appData.activities.some(a =>
                 a.row === testRow && !(a.endAge < startAge || a.startAge > endAge)
             );
             if (!collision) return testRow;
         }
-        
-        // W razie czego - zupełnie nowy
+
         return (maxRow + 2);
     }
 
-    /** 
-     * Sprawdza: czy w jakimkolwiek roku z dodanego zakresu
-     * WSZYSTKIE WIERESZE (0..maxUsedRow) są zajęte?
-     * Jeśli tak: należy dodać pusty wiersz na końcu tabeli!
-     */
     shouldAddExtraRow(startAge, endAge) {
-        // Jak wiele wierszy jest obecnie używanych?
         const allRows = this.appData.activities.map(a => a.row).filter(x => typeof x === "number");
         if (allRows.length === 0) return false;
-        
+
         const maxRow = Math.max(...allRows);
 
-        // Sprawdź każdy rok z zakresu
         for (let age = startAge; age <= endAge; age++) {
             let busyRows = 0;
-            // Sprawdź każdy wiersz czy jest zajęty w tym roku
             for (let row = 0; row <= maxRow; row++) {
                 const inRow = this.appData.activities.some(a =>
                     a.row === row && a.startAge <= age && a.endAge >= age
                 );
                 if (inRow) busyRows++;
             }
-            // Jeśli wszystkie wiersze są zajęte w tym roku
             if (busyRows > maxRow) {
                 return true;
             }
@@ -342,10 +364,8 @@ class DynamicTimeline {
         return false;
     }
 
-    /** Dodaj pusty wiersz (po stronie renderowania) */
     forceAddRow() {
         // Pusty wiersz pojawia się automatycznie przez renderTable
-        // gdy maxRow zwiększy się - nie trzeba nic robić
     }
 
     getActivityDisplayName(type) {
@@ -371,7 +391,7 @@ class DynamicTimeline {
         let periodText = this.isAgeMode
             ? `${activity.startAge}-${activity.endAge} lat`
             : `${this.appData.birthYear + activity.startAge}-${this.appData.birthYear + activity.endAge}`;
-        
+
         period.value = periodText;
         typeSelect.value = activity.type;
 
@@ -379,7 +399,7 @@ class DynamicTimeline {
             workDetails.style.display = 'block';
             const contractSelect = document.getElementById('editContractType');
             const salarySlider = document.getElementById('editSalarySlider');
-            
+
             if (contractSelect && activity.contractType) {
                 for (let option of contractSelect.options) {
                     if (option.text === activity.contractType) {
@@ -388,7 +408,7 @@ class DynamicTimeline {
                     }
                 }
             }
-            
+
             if (salarySlider && activity.salary) {
                 salarySlider.value = activity.salary;
                 this.updateEditSalaryDisplay();
@@ -473,10 +493,9 @@ class DynamicTimeline {
         const table = document.getElementById('timeline-table');
         table.innerHTML = '';
 
-        // Oblicz maksymalny wiersz z dodatkowym buforem
         const allRows = this.appData.activities.map(a => a.row).filter(x => typeof x === "number");
         const maxRow = allRows.length ? Math.max(...allRows) : -1;
-        const totalRows = maxRow + 3; // nagłówek + wiersze aktywności + 1 pusty na końcu
+        const totalRows = maxRow + 3;
 
         const rowHeights = ['25px', ...Array(totalRows - 1).fill('35px')];
         table.style.gridTemplateRows = rowHeights.join(' ');
@@ -513,7 +532,6 @@ class DynamicTimeline {
             (activity.row || 0) === rowIndex
         );
 
-        // Renderuj puste bloki dla tego wiersza
         for (let age = 10; age <= 80; age++) {
             const block = document.createElement('div');
             block.className = 'year-block';
@@ -524,7 +542,6 @@ class DynamicTimeline {
             table.appendChild(block);
         }
 
-        // Renderuj paski aktywności
         rowActivities.forEach((activity) => {
             this.renderActivityBar(activity, rowIndex);
         });
@@ -555,6 +572,9 @@ class DynamicTimeline {
         table.appendChild(bar);
     }
 
+    /**
+     * POPRAWIONA METODA - Generuje pionowe linie z etykietami wyśrodkowanymi bezpośrednio pod nimi
+     */
     renderVerticalLines() {
         const overlay = document.getElementById('timeline-overlay');
         const labels = document.getElementById('timeline-line-labels');
@@ -563,11 +583,17 @@ class DynamicTimeline {
         overlay.innerHTML = '';
         labels.innerHTML = '';
 
-        // NOWE: Oblicz aktualną wysokość tabeli na podstawie liczby wierszy
+        // Oblicz liczbę wierszy aktywności
         const allRows = this.appData.activities.map(a => a.row).filter(x => typeof x === "number");
         const maxRow = allRows.length ? Math.max(...allRows) : -1;
-        const totalRows = maxRow + 3; // nagłówek + wiersze aktywności + 1 pusty
-        const tableHeight = 25 + (totalRows - 1) * 35; // wysokość nagłówka + wiersze po 35px
+        const totalActivityRows = maxRow + 2;
+
+        // Wysokości
+        const headerHeight = 25;
+        const rowHeight = 35;
+        const linesStartY = headerHeight;
+        const linesHeight = (totalActivityRows + 2) * rowHeight;
+        const labelsY = headerHeight + linesHeight + 5;
 
         const currentYear = new Date().getFullYear();
         const legalYear = this.appData.birthYear + this.appData.legalRetirementAge;
@@ -575,100 +601,51 @@ class DynamicTimeline {
 
         const lines = [
             {
-                posAge: this.appData.currentAge,
+                age: this.appData.currentAge,
                 className: 'current-age-line',
-                labelClassName: 'current-age-label',
-                text: this.isAgeMode
-                    ? `${this.appData.currentAge} lat`
-                    : `${currentYear}`,
-                shortText: this.isAgeMode ? `${this.appData.currentAge}` : `'${String(currentYear).slice(-2)}`,
-                priority: 3
+                labelClass: 'current-age-label',
+                text: this.isAgeMode ? `${this.appData.currentAge} lat` : `${currentYear}`
             },
             {
-                posAge: this.appData.legalRetirementAge,
+                age: this.appData.legalRetirementAge,
                 className: 'legal-retirement-line',
-                labelClassName: 'legal-retirement-label',
-                text: this.isAgeMode
-                    ? `Emerytura ${this.appData.legalRetirementAge}`
-                    : `Emerytura ${legalYear}`,
-                shortText: this.isAgeMode ? `E${this.appData.legalRetirementAge}` : `E'${String(legalYear).slice(-2)}`,
-                priority: 2
+                labelClass: 'legal-retirement-label',
+                text: this.isAgeMode ? `Emerytura ${this.appData.legalRetirementAge}` : `Emerytura ${legalYear}`
             },
             {
-                posAge: this.appData.plannedRetirementAge,
+                age: this.appData.plannedRetirementAge,
                 className: 'planned-retirement-line',
-                labelClassName: 'planned-retirement-label',
-                text: this.isAgeMode
-                    ? `Plan ${this.appData.plannedRetirementAge}`
-                    : `Plan ${plannedYear}`,
-                shortText: this.isAgeMode ? `P${this.appData.plannedRetirementAge}` : `P'${String(plannedYear).slice(-2)}`,
-                priority: 1
+                labelClass: 'planned-retirement-label',
+                text: this.isAgeMode ? `Plan ${this.appData.plannedRetirementAge}` : `Plan ${plannedYear}`
             }
         ];
 
-        // Filtruj linie które są w zakresie i sortuj według priorytetu
-        const visibleLines = lines
-            .filter(lineData => lineData.posAge >= 10 && lineData.posAge <= 80)
-            .sort((a, b) => b.priority - a.priority);
+        lines.forEach(line => {
+            if (line.age < 10 || line.age > 80) return;
 
-        // Sprawdź kolizje pozycji
-        const positions = visibleLines.map(lineData => ({
-            ...lineData,
-            position: ((lineData.posAge - 10) / 70) * 100
-        }));
+            // POPRAWIONE OBLICZENIE: Pozycja środka kolumny
+            // Timeline ma 71 kolumn (wiek 10-80)
+            // Dla wieku X: kolumna = X - 10, środek kolumny = (X - 10 + 0.5) / 71
+            const xPercent = ((line.age - 10 + 0.5) / 71) * 100;
 
-        // Funkcja sprawdzania czy etykiety się nakładają
-        const checkOverlap = (pos1, pos2, minDistance = 8) => {
-            return Math.abs(pos1 - pos2) < minDistance;
-        };
+            // Linia przerywana - wyśrodkowana względem pozycji
+            const lineEl = document.createElement('div');
+            lineEl.className = `timeline-vertical-line ${line.className}`;
+            lineEl.style.left = `${xPercent}%`;
+            lineEl.style.top = `${linesStartY}px`;
+            lineEl.style.height = `${linesHeight}px`;
+            lineEl.style.transform = 'translateX(-50%)'; // Wyśrodkowanie linii
+            overlay.appendChild(lineEl);
 
-        // Rozwiąż kolizje etykiet
-        positions.forEach((lineData, index) => {
-            lineData.useShortText = false;
-            lineData.offset = 0;
-
-            for (let i = 0; i < index; i++) {
-                const other = positions[i];
-                if (checkOverlap(lineData.position, other.position + other.offset)) {
-                    lineData.useShortText = true;
-
-                    if (checkOverlap(lineData.position, other.position + other.offset, 6)) {
-                        lineData.offset = 25;
-                    }
-                }
-            }
+            // Etykieta - wyśrodkowana bezpośrednio pod linią
+            const labelEl = document.createElement('div');
+            labelEl.className = `timeline-line-label ${line.labelClass}`;
+            labelEl.style.left = `${xPercent}%`;
+            labelEl.style.top = `${labelsY}px`;
+            labelEl.style.transform = 'translateX(-50%)'; // Wyśrodkowanie etykiety
+            labelEl.textContent = line.text;
+            labels.appendChild(labelEl);
         });
-
-        // Renderuj linie i etykiety
-        positions.forEach(lineData => {
-            // POPRAWIONE: Pionowa linia z dynamiczną wysokością
-            const line = document.createElement('div');
-            line.className = `timeline-vertical-line ${lineData.className}`;
-            line.style.left = `${lineData.position}%`;
-            line.style.top = '40px'; // od nagłówka
-            line.style.height = `${tableHeight - 40 - 35}px`; // do końca tabeli minus miejsce na etykiety
-            line.style.bottom = 'auto'; // usuń bottom, używamy height
-            overlay.appendChild(line);
-
-            // POPRAWIONE: Etykieta pozycjonowana względem końca tabeli
-            const label = document.createElement('div');
-            label.className = `timeline-line-label ${lineData.labelClassName}`;
-            label.style.left = `${lineData.position}%`;
-            label.style.top = `${tableHeight - 30 + lineData.offset}px`; // tuż pod tabelą + offset
-            label.style.bottom = 'auto'; // usuń bottom positioning
-
-            label.textContent = lineData.useShortText ? lineData.shortText : lineData.text;
-
-            if (lineData.useShortText) {
-                label.title = lineData.text;
-                label.style.cursor = 'help';
-            }
-
-            labels.appendChild(label);
-        });
-
-        // NOWE: Dostosuj wysokość kontenera etykiet
-        labels.style.height = `${Math.max(60, tableHeight + 40)}px`;
     }
 
     updatePensionDisplay() {
