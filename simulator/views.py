@@ -36,7 +36,7 @@ def dashboard(request):
     """Dashboard z timeline prostokątów - tryb demo bez logowania"""
     # ---- DOMYŚLNE DANE (fallback) ----
     current_age = 30
-    legal_retirement_age = 65
+    legal_retirement_age = 40
     planned_retirement_year = 2060
     gender = 'M'  # 'M' lub 'K' na potrzeby Twoich wyliczeń/wyświetlania
 
@@ -57,6 +57,8 @@ def dashboard(request):
     elif sess_gender == "Mężczyzna":
         gender = 'M'
 
+    legal_retirement_age = 60 if gender == 'K' else 65
+
     # jeśli chcesz też brać „cel emerytury” (opcjonalnie do prezentacji)
     target_pension = _to_int(sess.get("target_pension"))
 
@@ -70,6 +72,7 @@ def dashboard(request):
         'legal_retirement_age': legal_retirement_age,
         'planned_retirement_age': planned_retirement_age,
         'birth_year': birth_year,
+        'gender': gender,
         'activities': []
     }
 
@@ -127,8 +130,10 @@ def conversation_profile(request):
             "target_pension": request.POST.get("target_pension"),
         }
         request.session["profile_conversation"] = data
+        request.session.modified = True  # DODAJ TO! Wymusza zapis sesji
+
         # TODO: tu możesz zapisać do modelu Użytkownika / Profilu
-        return redirect(reverse("simulator:dashboard"))  # albo gdzie wolisz
+        return redirect(reverse("simulator:dashboard"))
     return render(request, "simulator/conversation_form.html")
 
 def build_periods(user_profile) -> list:

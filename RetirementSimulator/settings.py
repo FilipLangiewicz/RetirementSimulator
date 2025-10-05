@@ -155,3 +155,6 @@ LOGGING = {
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+
+SESSION_SAVE_EVERY_REQUEST = True  # Dodaj tymczasowo do testowania
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # lub 'cached_db'

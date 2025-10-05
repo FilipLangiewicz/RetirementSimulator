@@ -30,7 +30,7 @@ class DynamicTimeline {
                 currentAge: 30,
                 gender: 'M',
                 birthYear: 1995,
-                legalRetirementAge: 65,
+                legalRetirementAge: 51,
                 plannedRetirementAge: 65,
                 activities: []
             };
@@ -41,11 +41,11 @@ class DynamicTimeline {
 
             // Mapuj dane z Django na appData
             return {
-                currentAge: djangoData.current_age || 30,
+                currentAge: djangoData.current_age || 27,
                 gender: djangoData.gender || 'M',
                 birthYear: djangoData.birth_year || 1995,
-                legalRetirementAge: djangoData.legal_retirement_age || 65,
-                plannedRetirementAge: djangoData.planned_retirement_age || 65,
+                legalRetirementAge: djangoData.legal_retirement_age || 52,
+                plannedRetirementAge: djangoData.planned_retirement_age || 72,
                 activities: djangoData.activities || []
             };
         } catch (error) {
@@ -55,27 +55,13 @@ class DynamicTimeline {
                 currentAge: 30,
                 gender: 'M',
                 birthYear: 1995,
-                legalRetirementAge: 65,
+                legalRetirementAge: 50,
                 plannedRetirementAge: 65,
                 activities: []
             };
         }
     }
 
-    // USUŃ metodę setupAppData() - nie jest już potrzebna!
-    // setupAppData() {
-    //     const currentYear = new Date().getFullYear();
-    //     this.appData.birthYear = currentYear - this.appData.currentAge;
-    //     this.appData.legalRetirementAge = this.appData.gender === 'K' ? 60 : 65;
-    //     this.appData.plannedRetirementAge = this.appData.legalRetirementAge;
-    // }
-
-    init() {
-        // setupAppData() nie jest już potrzebne - dane pochodzą z Django
-        this.renderTimeline();
-        this.bindEvents();
-        this.updatePensionDisplay();
-    }
 
     bindEvents() {
         const table = document.getElementById('timeline-table');
