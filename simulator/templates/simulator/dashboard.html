@@ -71,9 +71,9 @@
     }
 
     .year-header {
-        background: transparent;        /* usuń białe tło */
-        border: none;                   /* usuń obramowanie */
-        color: #495057;                 /* ciemniejszy odcień dla czytelności */
+        background: transparent;
+        border: none;
+        color: #495057;
         font-size: 8px;
         font-weight: 600;
         display: flex;
@@ -86,6 +86,11 @@
     /* Wiersze aktywności */
     .activity-row {
         display: contents;
+    }
+
+    .activity-bar:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
     .year-block {
@@ -101,6 +106,24 @@
         font-weight: 600;
         user-select: none;
         height: 35px;
+        z-index: 5;  /* Niższy z-index */
+    }
+
+    .timeline-table.is-dragging {
+        cursor: crosshair;
+    }
+
+    .timeline-table.is-dragging .activity-bar {
+        pointer-events: none; /* Wyłącz podczas przeciągania */
+    }
+
+    /* Dodaj styl dla dragging mode */
+    .timeline-table.dragging .activity-bar {
+        pointer-events: none;  /* Wyłącz podczas przeciągania */
+    }
+
+    .timeline-table.dragging .year-block {
+        pointer-events: auto;  /* Włącz podczas przeciągania */
     }
 
     .year-block:hover {
@@ -108,48 +131,177 @@
         border-color: rgb(63, 132, 210);
     }
 
-    /* Specjalne oznaczenia */
-    .year-block.current-age {
-        background: rgb(0, 153, 63);
-        color: white;
-        border-color: rgb(0, 153, 63);
+    .year-block.selecting {
+        background: rgba(63, 132, 210, 0.5);
+        border-color: rgb(63, 132, 210);
+        border-width: 2px;
     }
 
-    .year-block.legal-retirement {
-        background: rgb(240, 94, 94);
-        color: white;
+    .timeline-overlay {
+        position: absolute;
+        top: 0;
+        left: 10px;
+        right: 10px;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 5;
+        min-height: 100%; /* zapewnij pełną wysokość */
+    }
+
+    .timeline-vertical-line {
+        position: absolute;
+        width: 2px;
+        border-left: 2px dashed;
+        opacity: 0.7;
+        z-index: 5;
+        /* top i height są ustawiane dynamicznie w JS */
+    }
+
+    .timeline-vertical-line.current-age-line {
+        border-color: rgb(0, 153, 63);
+        opacity: 0.9;
+    }
+
+    .timeline-vertical-line.legal-retirement-line {
         border-color: rgb(240, 94, 94);
     }
 
-    .year-block.planned-retirement {
-        background: rgb(63, 132, 210);
-        color: white;
+    .timeline-vertical-line.planned-retirement-line {
         border-color: rgb(63, 132, 210);
     }
 
-    /* Aktywności */
-    .year-block.work {
+    .timeline-line-labels {
+        position: absolute;
+        bottom: 0;
+        left: 10px;
+        right: 10px;
+        pointer-events: none;
+        overflow: visible;
+        /* height ustawiana dynamicznie w JS */
+    }
+
+    .timeline-line-label {
+        position: absolute;
+        font-size: 9px;
+        font-weight: 600;
+        padding: 3px 6px;
+        border-radius: 3px;
+        color: white;
+        text-align: center;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        min-width: fit-content;
+        max-width: 80px;
+        line-height: 1.2;
+        transition: all 0.2s ease;
+        z-index: 15; /* nad liniami */
+    }
+
+    .timeline-line-label:hover {
+        transform: translateX(-50%) scale(1.05);
+        z-index: 20;
+    }
+
+    .timeline-line-label.current-age-label {
+        background: rgb(0, 153, 63);
+        border: 1px solid rgba(0, 153, 63, 0.8);
+    }
+
+    .timeline-line-label.legal-retirement-label {
+        background: rgb(240, 94, 94);
+        border: 1px solid rgba(240, 94, 94, 0.8);
+    }
+
+    .timeline-line-label.planned-retirement-label {
+        background: rgb(63, 132, 210);
+        border: 1px solid rgba(63, 132, 210, 0.8);
+    }
+
+    /* NOWE: Dostosuj kontener timeline do dynamicznej wysokości */
+    .timeline-container {
+        position: relative;
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        overflow: visible; /* zmień z hidden na visible */
+        margin: 20px 0;
+        width: 100%;
+        min-height: 180px;
+        padding-bottom: 40px; /* miejsce na etykiety */
+    }
+
+    /* Scalony prostokąt aktywności */
+    .activity-bar {
+        position: relative;
+        pointer-events: auto;  /* Zachowaj dla edycji */
+        height: 35px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+        border: 1px solid;
+        z-index: 10;  /* Wyższy z-index niż year-block */
+    }
+
+    .activity-bar:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .activity-bar.work {
         background: rgb(255, 179, 79);
         color: #333;
         border-color: rgb(255, 179, 79);
     }
 
-    .year-block.sick-leave {
+    .activity-bar.sick-leave {
         background: rgb(240, 94, 94);
         color: white;
         border-color: rgb(240, 94, 94);
     }
 
-    .year-block.break {
+    .activity-bar.break {
         background: rgb(190, 195, 206);
         color: #333;
         border-color: rgb(190, 195, 206);
     }
 
-    .year-block.selecting {
-        background: rgba(63, 132, 210, 0.5);
-        border-color: rgb(63, 132, 210);
-        border-width: 2px;
+    /* Context menu */
+    .context-menu {
+        position: fixed;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        min-width: 150px;
+        display: none;
+    }
+
+    .context-menu-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .context-menu-item:last-child {
+        border-bottom: none;
+    }
+
+    .context-menu-item:hover {
+        background: #f8f9fa;
+    }
+
+    .context-menu-item.delete {
+        color: #dc3545;
     }
 
     .stats-grid {
@@ -215,14 +367,14 @@
         left: 10px;
         right: 10px;
         bottom: 0;
-        pointer-events: none; /* nie blokuje interakcji z timeline */
+        pointer-events: none;
         z-index: 5;
     }
 
     .timeline-vertical-line {
         position: absolute;
-        top: 40px; /* po headerze */
-        bottom: 40px; /* miejsce na etykiety */
+        top: 40px;
+        bottom: 40px;
         width: 2px;
         border-left: 2px dashed;
         opacity: 0.8;
@@ -273,6 +425,23 @@
 
     .timeline-line-label.planned-retirement-label {
         background: rgb(63, 132, 210);
+    }
+
+    /* NOWY: Tryb edycji - włącz pointer events */
+    .timeline-table.edit-mode .activity-bar {
+        pointer-events: auto;
+    }
+
+    /* NOWY: Wskaźnik trybu edycji */
+    .timeline-table.edit-mode .activity-bar:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        cursor: pointer;
+    }
+
+    /* NOWY: Wskaźnik gdy jesteśmy w trybie zaznaczania */
+    .timeline-table:not(.edit-mode) .activity-bar {
+        opacity: 0.8; /* lekko przezroczyste, żeby pokazać że są "pod spodem" */
     }
 
     @media (max-width: 768px) {
@@ -386,12 +555,10 @@
                 <!-- Etykiety będą dodawane przez JS -->
             </div>
         </div>
-
-        </div>
+    </div>
 </div>
 
-<!-- Pozostałe modale bez zmian... -->
-<!-- Modal wyboru aktywności (pierwszy krok) -->
+<!-- Modal wyboru aktywności -->
 <div class="modal fade" id="activityModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -468,6 +635,70 @@
     </div>
 </div>
 
+<!-- Modal edycji aktywności -->
+<div class="modal fade" id="editActivityModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edytuj aktywność</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editActivityForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Typ aktywności</label>
+                                <select class="form-select" id="editActivityType" required>
+                                    <option value="work">Praca</option>
+                                    <option value="sick-leave">Urlop zdrowotny</option>
+                                    <option value="break">Przerwa w pracy</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Okres</label>
+                                <input type="text" class="form-control" id="edit-period-display" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Szczegóły pracy -->
+                    <div id="editWorkDetails" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Typ umowy</label>
+                                    <select class="form-select" id="editContractType">
+                                        {% for contract_type in contract_types %}
+                                        <option value="{{ contract_type.id }}">{{ contract_type.display_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Wynagrodzenie brutto miesięczne</label>
+                            <div class="salary-display" id="edit-salary-display">5 000 zł</div>
+                            <input type="range" class="salary-slider" id="editSalarySlider"
+                                   min="1000" max="50000" step="1000" value="5000">
+                            <div class="d-flex justify-content-between text-muted small mt-2">
+                                <span>1 000 zł</span>
+                                <span>50 000 zł</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-primary" id="saveEditedActivity">Zapisz zmiany</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal profilu -->
 <div class="modal fade" id="profileModal" tabindex="-1">
     <div class="modal-dialog">
@@ -526,12 +757,96 @@
                     <li>Wybierz typ: Praca, Urlop zdrowotny lub Przerwa w pracy</li>
                     <li>Jeśli wybrałeś "Praca", uzupełnij szczegóły w kolejnym oknie</li>
                 </ol>
+                <h6 class="mt-4">Jak edytować aktywność:</h6>
+                <ol>
+                    <li>Kliknij prawym przyciskiem myszy na prostokąt aktywności</li>
+                    <li>Wybierz "Edytuj" lub "Usuń" z menu kontekstowego</li>
+                </ol>
                 <h6 class="mt-4">Przełącznik wyświetlania:</h6>
-                <p>Użyj przełącznika w prawym górnym rogu timeline, aby zmieniać między widokiem wieku życia (10-100 lat) a latami kalendarzowymi.</p>
-                <h6 class="mt-4">Edycja profilu:</h6>
-                <p>Kliknij przycisk "Edytuj dane" aby zmienić swój wiek, płeć i planowany rok emerytury.</p>
+                <p>Użyj przełącznika w prawym górnym rogu timeline, aby zmieniać między widokiem wieku życia (10-80 lat) a latami kalendarzowymi.</p>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal edycji aktywności -->
+<div class="modal fade" id="editActivityModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edytuj aktywność</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editActivityForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Typ aktywności</label>
+                                <select class="form-select" id="editActivityType" required>
+                                    <option value="work">Praca</option>
+                                    <option value="sick-leave">Urlop zdrowotny</option>
+                                    <option value="break">Przerwa w pracy</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Okres</label>
+                                <input type="text" class="form-control" id="edit-period-display" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Szczegóły pracy -->
+                    <div id="editWorkDetails" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Typ umowy</label>
+                                    <select class="form-select" id="editContractType">
+                                        <option value="1">Umowa o pracę</option>
+                                        <option value="2">Umowa zlecenie</option>
+                                        <option value="3">Umowa o dzieło</option>
+                                        <option value="4">Działalność gospodarcza (B2B)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Wynagrodzenie brutto miesięczne</label>
+                            <div class="salary-display" id="edit-salary-display">5 000 zł</div>
+                            <input type="range" class="salary-slider" id="editSalarySlider"
+                                   min="1000" max="50000" step="1000" value="5000">
+                            <div class="d-flex justify-content-between text-muted small mt-2">
+                                <span>1 000 zł</span>
+                                <span>50 000 zł</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="deleteActivityBtn">
+                    <i class="bi bi-trash me-1"></i>
+                    Usuń
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-primary" id="saveEditedActivity">Zapisz zmiany</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Context menu -->
+<div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" id="editActivity">
+        <i class="bi bi-pencil"></i>
+        Edytuj
+    </div>
+    <div class="context-menu-item delete" id="deleteActivity">
+        <i class="bi bi-trash"></i>
+        Usuń
     </div>
 </div>
 
