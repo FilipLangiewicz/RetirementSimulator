@@ -458,7 +458,7 @@ class DynamicTimeline {
         const range = document.getElementById('timeline-range');
 
         if (this.isAgeMode) {
-            label.textContent = 'Wiek życia';
+            label.textContent = 'Wiek';
             range.textContent = '10 - 80 lat';
         } else {
             label.textContent = 'Lata kalendarzowe';
@@ -596,7 +596,7 @@ class DynamicTimeline {
                 age: this.appData.legalRetirementAge,
                 className: 'legal-retirement-line',
                 labelClass: 'legal-retirement-label',
-                text: this.isAgeMode ? `Wiek emerytalny: ${this.appData.legalRetirementAge}` : `Wiek emerytalny: ${legalYear}`
+                text: this.isAgeMode ? `Wiek emerytalny: ${this.appData.legalRetirementAge}` : `${legalYear}`
             }
         ];
 

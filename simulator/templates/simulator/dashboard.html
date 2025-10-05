@@ -311,17 +311,25 @@
 
 <!-- Timeline -->
  {% block content %}
+
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+    <a href="{% url 'simulator:advisor_chat' %}" class="btn btn-primary btn-lg shadow-lg">
+        <i class="bi bi-chat-dots me-1"></i> Doradca
+    </a>
+</div>
 <div class="card">
     <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between">
             <h3 class="mb-0">
                 <i class="bi bi-timeline me-2"></i>
                 Oś czasu
             </h3>
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#helpModal">
-                <i class="bi bi-question-circle me-1"></i>
-                Pomoc
-            </button>
+            <div style="align-content: right">
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#helpModal">
+                    <i class="bi bi-question-circle me-1"></i>
+                    Pomoc
+                </button>
+            </div>
         </div>
         <p class="text-muted mt-2 mb-0">
             {{ first_name }}, opowiedz nam o swojej karierze zawodowej. Przeciągnij myszką, aby zaznaczyć okres. Każdy prostokąt to jeden rok.
@@ -905,4 +913,60 @@ if (pensionElement) {
 
 {% block extra_js %}
 <script src="{% static 'simulator/js/timeline.js' %}"></script>
+<script>
+document.getElementById('saveProfile').addEventListener('click', function() {
+    const age = document.getElementById('profileAge').value;
+    const gender = document.getElementById('profileGender').value;
+    const retirementYear = document.getElementById('profileRetirementYear').value;
+    
+    // Walidacja
+    if (!age || age < 18 || age > 80) {
+        alert('Wiek musi być w przedziale 18-80 lat');
+        return;
+    }
+    
+    // Wyślij dane do serwera
+    fetch('{% url "simulator:update_profile" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            age: parseInt(age),
+            gender: gender,
+            retirement_year: parseInt(retirementYear)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Zamknij modal
+            bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+            
+            // Zaktualizuj tylko wyświetlane dane bez przeładowania
+            document.getElementById('current-age').textContent = age;
+            
+            // Zaktualizuj wiek emerytalny
+            const legalRetirementAge = gender === 'K' ? 60 : 65;
+            document.getElementById('retirement-age').textContent = legalRetirementAge;
+            
+            // Przelicz timeline - zaktualizuj linie i etykiety
+            if (typeof window.timelineManager !== 'undefined') {
+                window.timelineManager.currentAge = parseInt(age);
+                window.timelineManager.gender = gender;
+                window.timelineManager.legalRetirementAge = legalRetirementAge;
+                window.timelineManager.drawVerticalLines();
+                window.timelineManager.recalculatePension();
+            }
+        } else {
+            alert('Błąd podczas zapisu: ' + (data.error || 'Nieznany błąd'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Wystąpił błąd podczas zapisywania danych');
+    });
+});
+</script>
 {% endblock %}

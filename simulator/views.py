@@ -7,6 +7,228 @@ from simulator.models import WorkPeriod
 from decimal import Decimal
 from simulator.utils.pension_calculator import PeriodInput
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+import json
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from datetime import date
+import json
+from .models import ContractType
+from simulator.models import WorkPeriod
+from decimal import Decimal
+from simulator.utils.pension_calculator import PeriodInput
+from django.views.generic import TemplateView
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.http import JsonResponse, HttpRequest
+import re
+
+
+def _fmt_pln(x: float) -> str:
+    return f"{x:,.0f} zł".replace(",", " ")
+
+def _to_int(val, default=None):
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+def conversation_session(request):
+    """Wygodny odczyt danych z sesji."""
+    return request.session.get("profile_conversation") or {}
+
+def _base_context(user):
+    """
+    Fallback – gdy nie ma danych w sesji/DB.
+    Dopasuj do swoich modeli, jeśli masz pełne wyliczenia w DB.
+    """
+    profile = getattr(user, "profile", None)
+    pension_data = getattr(user, "pension_data", None)
+    ctx = {
+        "age": getattr(profile, "age", None),
+        "gender": getattr(profile, "gender", "M"),
+        "planned_retirement_year": getattr(profile, "planned_retirement_year", None),
+        "retirement_age": getattr(pension_data, "retirement_age", None),
+        "total_work_years": getattr(pension_data, "total_work_years", 0) or 0,
+        "total_contributions": float(getattr(pension_data, "total_contributions", 0) or 0),
+        "gross_pension": float(getattr(pension_data, "pension_amount", 0) or 0),
+    }
+    return ctx
+
+# ---------------------------------------------------
+# Doradca – regułki i API
+# ---------------------------------------------------
+
+def _advise_increase_benefit(ctx):
+    tips = []
+    if ctx.get("retirement_age"):
+        tips.append(
+            "Rozważ przejście na emeryturę 2–3 lata później. Zwykle podnosi to świadczenie: dopłacasz składki i skracasz okres wypłaty."
+        )
+    tips.append("Jeśli możesz, zwiększ podstawę składek (wyższa pensja na UoP lub dłuższy okres składkowy).")
+    tips.append("Unikaj długich przerw i zleceń bez emerytalnych składek — ciągłość lat bardzo pomaga.")
+    tips.append("Włącz oszczędzanie w III filarze (PPK/IKE/IKZE). Małe, regularne wpłaty robią dużą różnicę po latach.")
+    tips.append("Dbaj o siłę nabywczą — poduszka finansowa i waloryzowane oszczędności to spokojniejsza głowa.")
+    return tips
+
+def _advise_savings(ctx):
+    tips = [
+        "Podziel oszczędzanie: ok. 70% na długi termin (PPK/IKE/IKZE), 30% w poduszce (6× miesięczne wydatki).",
+        "IKZE daje ulgę w PIT — w zeznaniu rocznym odzyskasz część wpłat.",
+        "Ustaw stały przelew po wypłacie (np. 5–10% pensji), żeby nie odkładać decyzji w czasie.",
+        "Dywersyfikuj: mieszanka ETF-ów i bezpieczniejszych obligacji/lokat.",
+    ]
+    if (ctx.get("age") or 0) < 30:
+        tips.append("Masz dużo czasu — możesz mieć więcej akcji (np. globalny ETF).")
+    else:
+        tips.append("Im bliżej emerytury, tym więcej obligacji i stabilnych aktywów.")
+    return tips
+
+def _advise_plan_review(ctx):
+    msgs = []
+    if ctx.get("total_work_years", 0) < 5:
+        msgs.append("Staż jest krótki — postaraj się o ciągłość okresów składkowych w najbliższych latach.")
+    if ctx.get("gross_pension", 0) < 4000:
+        msgs.append("Prognoza nie jest wysoka — rozważ dorzucenie III filaru.")
+    msgs.append("Przejrzyj oś życia: skróć przerwy i dodaj realne lata pracy tam, gdzie to możliwe.")
+    return msgs
+
+INTENTS = {
+    "powitanie": {
+        "patterns": [r"\b(cześć|hej|dzień dobry|siema)\b"],
+        "reply": ["Cześć! Jestem prostym doradcą emerytalnym. Napisz, jak mogę pomóc 🙂"],
+    },
+    "pomoc": {
+        "patterns": [r"jak (możesz|mozesz) mi pomóc", r"pom[oó]ż", r"co potrafisz"],
+        "reply": [
+            "Pomagam zrozumieć Twoją prognozę i podpowiadam, co zrobić, by była wyższa. Zapytaj np.: "
+            "„Chcę wyższą emeryturę”, „Jak oszczędzać?”, „Czy warto zmienić plan?”"
+        ],
+    },
+    "wyzsza_emerytura": {
+        "patterns": [r"więcej na emeryturze", r"wyższ[ae]j? emerytur", r"zwiększyć emerytur", r"chcę wyższ"],
+        "fn": _advise_increase_benefit,
+    },
+    "oszczedzanie": {
+        "patterns": [r"dodatkowe sposoby oszczędzania", r"jak oszczędzać", r"oszczędzanie", r"ike|ikze|ppk"],
+        "fn": _advise_savings,
+    },
+    "zmiana_planu": {
+        "patterns": [r"warto (coś|cos) zmienić", r"zmieni[ćc] plan", r"co zmienić"],
+        "fn": _advise_plan_review,
+    },
+}
+
+def _match_intent(text: str):
+    t = text.lower()
+    for key, spec in INTENTS.items():
+        for pat in spec.get("patterns", []):
+            if re.search(pat, t):
+                return key
+    return None
+
+@method_decorator(csrf_exempt, name="dispatch")
+class AdvisorChatView(TemplateView):
+    template_name = "simulator/advisor_chat.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        # >>> Wczytujemy snapshot z dashboardu (to, co użytkownik widzi tam)
+        snap = self.request.session.get("last_dashboard") or {}
+        # snap zawiera: formatted_pension, pension_data, profile
+        ctx.update(snap)
+
+        # Fallback (gdyby sesja była pusta)
+        base = _base_context(self.request.user)
+        ctx["profile_ctx"] = {
+            **base,
+            "total_contributions_fmt": _fmt_pln(base["total_contributions"]),
+            "gross_pension_fmt": _fmt_pln(base["gross_pension"]),
+            "target_pension_fmt": _fmt_pln(base.get("target_pension") or 0) if base.get("target_pension") else "—",
+        }
+        return ctx
+
+@csrf_exempt
+def advisor_chat_api(request: HttpRequest):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = {}
+
+    user_text = (payload.get("message") or "").strip()
+    base = _base_context(request.user)
+
+    if not user_text:
+        return JsonResponse({"reply": "Napisz wiadomość, a postaram się pomóc."})
+
+    intent = _match_intent(user_text)
+
+    if not intent:
+        return JsonResponse({
+            "reply": (
+                "Nie jestem pewien, o co pytasz. Możesz napisać: "
+                "„Chcę więcej na emeryturze”, „Jak oszczędzać?”, albo „Czy warto coś zmienić w moim planie?”"
+            ),
+            "suggestions": [
+                "Chcę więcej na emeryturze",
+                "Jak oszczędzać?",
+                "Czy warto coś zmienić w moim planie?"
+            ]
+        })
+
+    spec = INTENTS[intent]
+    if "fn" in spec:
+        tips = spec["fn"](base)
+        return JsonResponse({
+            "reply": "Oto co możesz zrobić:\n\n• " + "\n• ".join(tips),
+            "suggestions": ["Jak oszczędzać?", "Czy warto coś zmienić w moim planie?"]
+        })
+    else:
+        return JsonResponse({
+            "reply": spec["reply"][0],
+            "suggestions": ["Chcę więcej na emeryturze", "Jak oszczędzać?"]
+        })
+
+@require_POST
+def update_profile(request):
+    """Aktualizacja profilu użytkownika w sesji"""
+    try:
+        data = json.loads(request.body)
+        age = data.get('age')
+        gender = data.get('gender')
+        retirement_year = data.get('retirement_year')
+        
+        # Walidacja
+        if not age or age < 18 or age > 80:
+            return JsonResponse({'success': False, 'error': 'Nieprawidłowy wiek'})
+        
+        if gender not in ['M', 'K']:
+            return JsonResponse({'success': False, 'error': 'Nieprawidłowa płeć'})
+        
+        # Pobierz dane z sesji
+        profile_data = request.session.get('profile_conversation', {})
+        
+        # Zaktualizuj dane
+        current_year = date.today().year
+        birth_year = current_year - age
+        
+        profile_data['dob_year'] = str(birth_year)
+        profile_data['gender'] = 'Mężczyzna' if gender == 'M' else 'Kobieta'
+        
+        # Zapisz do sesji
+        request.session['profile_conversation'] = profile_data
+        request.session.modified = True
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 def home(request):
     """Strona główna - rozpoczęcie symulacji emerytalnej"""

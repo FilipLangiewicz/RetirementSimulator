@@ -53,6 +53,18 @@ textarea:focus,
     outline-offset: 2px;
 }
 
+.btn-primary {
+  --bs-btn-bg: #ffb34f;
+}
+
+
+.btn-primary {
+  --bs-btn-hover-bg: #f7a334;
+
+}
+
+
+
 /* Skip link dla czytników ekranu */
 .skip-link {
     position: absolute;
@@ -126,11 +138,17 @@ textarea:focus,
     transition: all 0.3s ease;
 }
 
+
 .btn-check:checked + .btn, .btn.active, .btn.show, .btn:first-child:active, :not(.btn-check) + .btn:active {
 
   background-color: var(--zus-green);
   border-color: var(--zus-green);
 }
+
+p.mt-2 {
+  margin-left: 11px;
+}
+
 
 .btn-zus-primary:hover {
     background: rgb(230, 160, 60);
