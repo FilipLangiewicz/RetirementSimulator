@@ -3,6 +3,9 @@ from django.urls import reverse
 from datetime import date
 import json
 from .models import ContractType
+from simulator.models import WorkPeriod
+from decimal import Decimal
+from simulator.utils.pension_calculator import PeriodInput
 
 
 def home(request):
@@ -127,3 +130,18 @@ def conversation_profile(request):
         # TODO: tu możesz zapisać do modelu Użytkownika / Profilu
         return redirect(reverse("simulator:dashboard"))  # albo gdzie wolisz
     return render(request, "simulator/conversation_form.html")
+
+def build_periods(user_profile) -> list:
+    periods = []
+    qs = WorkPeriod.objects.filter(user_profile=user_profile).order_by("start_year")
+    for wp in qs:
+        periods.append(
+            PeriodInput(
+                start_year=wp.start_year,
+                end_year=wp.end_year,
+                salary_gross_monthly=Decimal(wp.salary_gross_monthly),
+                contract_name=wp.contract_type.name,  # 'EMPLOYMENT', 'MANDATE', 'TASK', 'BUSINESS', 'B2B'
+                ref_year=wp.start_year,               # indeksacja odwrotna względem początku okresu
+            )
+        )
+    return periods
