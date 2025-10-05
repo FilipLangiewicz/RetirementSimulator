@@ -590,13 +590,13 @@ class DynamicTimeline {
                 age: this.appData.currentAge,
                 className: 'current-age-line',
                 labelClass: 'current-age-label',
-                text: this.isAgeMode ? `${this.appData.currentAge} lat` : `${currentYear}`
+                text: this.isAgeMode ? `Twój wiek: ${this.appData.currentAge} ` : `${currentYear}`
             },
             {
                 age: this.appData.legalRetirementAge,
                 className: 'legal-retirement-line',
                 labelClass: 'legal-retirement-label',
-                text: this.isAgeMode ? `Emerytura ${this.appData.legalRetirementAge}` : `Emerytura ${legalYear}`
+                text: this.isAgeMode ? `Wiek emerytalny: ${this.appData.legalRetirementAge}` : `Wiek emerytalny: ${legalYear}`
             }
         ];
 

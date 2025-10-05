@@ -39,6 +39,8 @@ def dashboard(request):
 
     # ---- NADPISANIE DANYMI Z SESJI (jeśli są) ----
     sess = conversation_session(request)
+    full_name = sess.get("full_name", "").strip()
+    first_name = full_name.split()[0] if full_name else "Użytkowniku"
     # rok urodzenia → wylicz wiek
     dob_year = _to_int(sess.get("dob_year"))
     if dob_year:
@@ -121,6 +123,7 @@ def dashboard(request):
         'pyramid_range': pyramid_info['range'],
         'pyramid_text_class': pyramid_info['text_class'],
         'pyramid_border_class': pyramid_info['border_class'],
+        'first_name': first_name
     }
     return render(request, 'simulator/dashboard.html', context)
 
