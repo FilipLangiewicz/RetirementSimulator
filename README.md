@@ -1,41 +1,41 @@
 # Retirement Simulator 🧮💬  
 
-**Retirement Simulator** to aplikacja, w której możesz *„rozegrać”* całe swoje życie zawodowe na osi czasu – od 18. roku życia aż do emerytury.  
-Wybierasz, kiedy pracujesz, na jakiej umowie, kiedy robisz przerwę albo przechodzisz na własną działalność.  
-Program pokazuje, jak takie decyzje wpływają na Twoją przyszłą emeryturę.  
+**Retirement Simulator** is an application where you can *“play through”* your entire professional life on a timeline – from age 18 all the way to retirement.  
+You decide when you work, what kind of contract you have, when you take breaks, or when you start your own business.  
+The program shows how these decisions affect your future pension.  
 
-Nie dostajesz tylko jednej liczby. Możesz porozmawiać z **chatbotem**, który oceni Twoje wybory, wskaże błędy i zasugeruje, co dałoby lepszy wynik.  
-To trochę jak rozmowa z doradcą emerytalnym – tylko bardziej bezpośrednia i obrazowa.  
-
----
-
-## 🚀 Jak to działa?  
-
-- Masz do dyspozycji **oś życia zawodowego** – od 18 do 80 lat.  
-- Zaznaczasz na niej, co robisz: pracujesz na etacie, prowadzisz firmę, bierzesz urlop albo wybierasz mniej korzystne umowy.  
-- Symulator liczy, ile pieniędzy zgromadzisz w ZUS, uwzględnia **waloryzację konta i subkonta** oraz aktualne zasady systemu.  
-- **Chatbot** komentuje Twoje decyzje – mówi, które były dobre, a które obniżyły Twoją emeryturę, i podpowiada alternatywy.  
+You don’t just get a single number. You can chat with a **chatbot** that evaluates your choices, points out mistakes, and suggests what could lead to a better outcome.  
+It’s a bit like talking to a retirement advisor – only more direct and visual.  
 
 ---
 
-## 🎯 Po co to robimy?  
+## 🚀 How It Works  
 
-Chcemy pokazać, że wybory dotyczące pracy naprawdę mają znaczenie.  
-
-- **Umowa o dzieło przez wiele lat?** → prawie żadnych składek.  
-- **B2B bez dodatkowych oszczędności?** → sporo na rękę teraz, ale bardzo niska emerytura później.  
-- **Praca o kilka lat dłużej?** → realna różnica w wysokości świadczenia.  
-
-Symulator uczy przez doświadczenie – widzisz, co stanie się z Twoją emeryturą, jeśli dziś wybierzesz jedną albo drugą drogę.  
+- You have access to a **career timeline** – from age 18 to 80.  
+- You mark what you do during those years: work full-time, run a business, take a break, or choose less favorable contracts.  
+- The simulator calculates how much money you’ll accumulate in the pension system, taking into account **account and sub-account indexation** and current system rules.  
+- The **chatbot** comments on your decisions – it tells you which were beneficial, which reduced your pension, and suggests alternatives.  
 
 ---
 
-## 🛠️ Funkcje  
+## 🎯 Why We’re Building This  
 
-- 📊 Interaktywna **oś życia zawodowego**, na której planujesz swoją przyszłość.  
-- 💼 Obsługa różnych typów umów i form zatrudnienia – **etat, zlecenie, dzieło, działalność, B2B**.  
-- 📈 Uwzględnianie **waloryzacji konta i subkonta ZUS** zgodnie z realnymi zasadami.  
-- 🤖 **Chatbot**, który ocenia Twoje wybory i tłumaczy ich konsekwencje.  
-- 🔄 Możliwość **porównania kilku scenariuszy**, żeby zobaczyć, co daje lepszy efekt.  
+We want to show that your work choices truly matter.  
+
+- **Freelance contract for many years?** → almost no contributions.  
+- **B2B without extra savings?** → good take-home pay now, but very low pension later.  
+- **Working a few years longer?** → a real difference in benefit amount.  
+
+The simulator teaches through experience – you can see what happens to your pension depending on which path you choose today.  
+
+---
+
+## 🛠️ Features  
+
+- 📊 Interactive **career timeline** to plan your professional future.  
+- 💼 Support for different contract types and forms of employment – **full-time, contract, freelance, self-employed, B2B**.  
+- 📈 Incorporates **pension account and sub-account indexation** based on real system rules.  
+- 🤖 **Chatbot** that evaluates your choices and explains their consequences.  
+- 🔄 Ability to **compare multiple scenarios** to see which one gives a better outcome.  
 
 ---
